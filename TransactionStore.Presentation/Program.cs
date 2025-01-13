@@ -1,6 +1,5 @@
 using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
-using TransactionStore.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,9 +7,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddFluentValidationAutoValidation();
-builder.Services.AddDbContext<ApplicationDbContext>(options =>   
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
-);
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>   
+//    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+//);
 
 var app = builder.Build();
 
