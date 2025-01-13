@@ -13,18 +13,32 @@ namespace TransactionStore.Presentation.Controllers
             _logger = logger;
         }
 
-        [HttpGet("{TransactionId}")]
+        [HttpGet("{transactionId}")]
         [EndpointSummary("Получение транзакции по Id")]
-        public ActionResult GetTransactionById(Guid TransactionId)
+        public ActionResult GetTransactionById(Guid transactionId)
         {
             return Ok();
         }
 
-        [HttpPost]
-        [EndpointSummary("Создание транзакции")]
-        public IActionResult CreateTransaction(string currency)
+        [HttpPost("deposit")]
+        [EndpointSummary("Создание транзакции на пополнение")]
+        public ActionResult CreateDepositTransaction()
         {
-            return Ok(currency);
+            return Ok();
+        }
+
+        [HttpPost("withdraw")]
+        [EndpointSummary("Создание транзакции на снятие средств")]
+        public ActionResult CreateWithdrawalTransaction()
+        {
+            return Ok();
+        }
+
+        [HttpPost("transfer")]
+        [EndpointSummary("Создание трансферной транзакции")]
+        public ActionResult CreateTransferTransaction()
+        {
+            return Ok();
         }
     }
 }

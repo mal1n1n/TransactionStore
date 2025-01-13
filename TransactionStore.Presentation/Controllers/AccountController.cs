@@ -13,28 +13,21 @@ namespace TransactionStore.Domain.Controllers
             _logger = logger;
         }
 
-        [HttpGet("{AccountId}/balance")]
+        [HttpGet("{accountId}/balance")]
         [EndpointSummary("Получение баланса аккаунта")]
-        public ActionResult<decimal> GetBalance(Guid AccountId)
+        public ActionResult<decimal> GetBalance(Guid accountId)
         {
             var rnd = new Random();
             var value = rnd.NextDouble() * 3000 - 1000;
-            _logger.Log(LogLevel.Information, "Returned balance {Value} for {AccountId}", value, AccountId);
+            _logger.Log(LogLevel.Information, "Returned balance {Value} for {AccountId}", value, accountId);
             return Ok((decimal)value);
         }
 
-        [HttpGet("{AccountId}/transactions")]
+        [HttpGet("{accountId}/transactions")]
         [EndpointSummary("Получение транзакций аккаунта")]
-        public ActionResult GetTransactions(Guid AccountId)
+        public ActionResult GetTransactions(Guid accountId)
         {
             return Ok();
-        }
-
-        [HttpPost]
-        [EndpointSummary("Создание аккаунта")]
-        public IActionResult CreateAccount(string currency)
-        {
-            return Ok(currency);
         }
     }
 }

@@ -11,10 +11,7 @@ internal static class TransactionModelCreating
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
             entity.Property(e => e.Date).HasColumnType("date");
-            entity.HasOne(e => e.Account)
-                .WithMany(e => e.Transactions)
-                .HasForeignKey(e => e.AccountId)
-                .HasPrincipalKey(e => e.Id);
+            entity.Property(e => e.AccountId).IsRequired();
         });
     }
 }
