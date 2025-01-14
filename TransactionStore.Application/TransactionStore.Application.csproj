@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TransactionStore.Infrastructure\TransactionStore.Infrastructure.csproj" />
+    <ProjectReference Include="..\TransactionStore.Persistence\TransactionStore.Persistence.csproj" />
   </ItemGroup>
 
 </Project>

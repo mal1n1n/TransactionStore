@@ -1,6 +1,6 @@
 using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
-using TransactionStore.Infrastructure.Data;
+using TransactionStore.Persistence.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 

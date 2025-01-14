@@ -15,4 +15,10 @@
     <ProjectReference Include="..\TransactionStore.Application\TransactionStore.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="DTOs\Requests\Validators\" />
+    <Folder Include="DTOs\Responses\" />
+    <Folder Include="Mappings\" />
+  </ItemGroup>
+
 </Project>
