@@ -15,14 +15,14 @@ public class AccountController : ControllerBase
     }
 
     [HttpGet("{accountId}/balance")]
-    [EndpointSummary("Получение баланса аккаунта")]
+    [EndpointSummary("РџРѕР»СѓС‡РµРЅРёРµ Р±Р°Р»Р°РЅСЃР° Р°РєРєР°СѓРЅС‚Р°")]
     public ActionResult<BalanceResponse> GetBalance(Guid accountId)
     {
         return Ok(new BalanceResponse());
     }
 
     [HttpGet("{accountId}/transactions")]
-    [EndpointSummary("Получение транзакций аккаунта")]
+    [EndpointSummary("РџРѕР»СѓС‡РµРЅРёРµ С‚СЂР°РЅР·Р°РєС†РёР№ Р°РєРєР°СѓРЅС‚Р°")]
     public ActionResult<List<ShortTransactionResponse>> GetTransactions(Guid accountId)
     {
         return Ok(new List<ShortTransactionResponse>() { new ShortTransactionResponse()});
