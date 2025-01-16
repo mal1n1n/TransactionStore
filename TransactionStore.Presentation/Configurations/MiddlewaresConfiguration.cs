@@ -7,4 +7,8 @@ public static class MiddlewaresConfiguration
     {
         app.UseMiddleware<ExceptionMiddleware>();
     }
+    public static void UseIPFilter(this IApplicationBuilder builder, string allowedIP)
+    {
+        builder.UseMiddleware<IPFilterMiddleware>(allowedIP);
+    }
 }
