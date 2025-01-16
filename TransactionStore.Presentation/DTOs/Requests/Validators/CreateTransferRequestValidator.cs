@@ -13,9 +13,9 @@ public class CreateTransferRequestValidator : AbstractValidator<CreateTransferRe
         RuleFor(x => x.Amount)
             .GreaterThan(0).WithMessage("Сумма должна быть больше нуля.");
         RuleFor(x => x.CurrencyPair)
-            .NotEmpty().WithMessage("Валюта обязательна для заполнения.")
-            .Length(6).WithMessage("Валюта должна состоять из 6 символов.")
-            .Must(BeAValidCurrencyPair).WithMessage("Валюта должна быть допустимой валютной парой.");
+            .NotEmpty().WithMessage("Валютная пара обязательна для заполнения.")
+            .Length(6).WithMessage("Валюта пара должна состоять из 6 символов (например RUBEUR).")
+            .Must(BeAValidCurrencyPair).WithMessage("Валютной пара не существует.");
     }
 
     private bool BeAValidCurrencyPair(string currencyPair)
