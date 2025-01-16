@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using TransactionStore.Presentation.DTOs.Requests;
+using TransactionStore.Presentation.DTOs.Responses;
 
 namespace TransactionStore.Presentation.Controllers
 {
@@ -15,28 +17,32 @@ namespace TransactionStore.Presentation.Controllers
 
         [HttpGet("{transactionId}")]
         [EndpointSummary("Получение транзакции по Id")]
-        public ActionResult GetTransactionById(Guid transactionId)
+        [EndpointDescription(
+            "Передача currency в запросе необходима для того, чтобы вернулся текущий курс валюты<br>" +
+            "Если currency не был указан, курс будет null")]
+        public ActionResult<TransactionResponse> GetTransactionById(Guid transactionId,[FromQuery] string? currency)
         {
-            return Ok();
+            var response = new TransactionResponse();
+            return Ok(response);
         }
 
         [HttpPost("deposit")]
         [EndpointSummary("Создание транзакции на пополнение")]
-        public ActionResult CreateDepositTransaction()
+        public ActionResult CreateDepositTransaction([FromBody] CreateDepositRequest request)
         {
             return Ok();
         }
 
         [HttpPost("withdraw")]
         [EndpointSummary("Создание транзакции на снятие средств")]
-        public ActionResult CreateWithdrawalTransaction()
+        public ActionResult CreateWithdrawalTransaction([FromBody] CreateWithdrawalRequest request)
         {
             return Ok();
         }
 
         [HttpPost("transfer")]
         [EndpointSummary("Создание трансферной транзакции")]
-        public ActionResult CreateTransferTransaction()
+        public ActionResult CreateTransferTransaction([FromBody] CreateTransferRequest request)
         {
             return Ok();
         }

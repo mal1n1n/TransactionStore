@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using TransactionStore.Presentation.DTOs.Responses;
 
 namespace TransactionStore.Domain.Controllers
 {
@@ -15,19 +16,16 @@ namespace TransactionStore.Domain.Controllers
 
         [HttpGet("{accountId}/balance")]
         [EndpointSummary("Получение баланса аккаунта")]
-        public ActionResult<decimal> GetBalance(Guid accountId)
+        public ActionResult<BalanceResponse> GetBalance(Guid accountId)
         {
-            var rnd = new Random();
-            var value = rnd.NextDouble() * 3000 - 1000;
-            _logger.Log(LogLevel.Information, "Returned balance {Value} for {AccountId}", value, accountId);
-            return Ok((decimal)value);
+            return Ok(new BalanceResponse());
         }
 
         [HttpGet("{accountId}/transactions")]
         [EndpointSummary("Получение транзакций аккаунта")]
-        public ActionResult GetTransactions(Guid accountId)
+        public ActionResult<List<ShortTransactionResponse>> GetTransactions(Guid accountId)
         {
-            return Ok();
+            return Ok(new List<ShortTransactionResponse>() { new ShortTransactionResponse()});
         }
     }
 }
