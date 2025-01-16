@@ -7,5 +7,6 @@ builder.Services.ConfigureDbContext(builder.Configuration);
 builder.Services.ConfigureFluentValidators();
 
 var app = builder.Build();
+app.ConfigureCustomExceptionMiddleware();
 app.ConfigureApplication();
 app.Run();
