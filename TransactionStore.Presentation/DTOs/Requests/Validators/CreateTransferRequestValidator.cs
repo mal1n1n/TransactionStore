@@ -12,19 +12,20 @@ public class CreateTransferRequestValidator : AbstractValidator<CreateTransferRe
             .NotEmpty().WithMessage("ToAccountId обязателен для заполнения.");
         RuleFor(x => x.Amount)
             .GreaterThan(0).WithMessage("Сумма должна быть больше нуля.");
-        RuleFor(x => x.CurrencyPair)
+        RuleFor(x => x.FromCurrency)
             .NotEmpty().WithMessage("Валютная пара обязательна для заполнения.")
-            .Length(6).WithMessage("Валюта пара должна состоять из 6 символов (например RUBEUR).")
-            .Must(BeAValidCurrencyPair).WithMessage("Валютной пара не существует.");
+            .Length(6).WithMessage("Валюта пара должна состоять из 3 символов (например RUB).")
+            .Must(BeAValidCurrency).WithMessage("Валюта указана неверно или не поддерживается.");
+        RuleFor(x => x.ToCurrency)
+            .NotEmpty().WithMessage("Валютная пара обязательна для заполнения.")
+            .Length(6).WithMessage("Валюта пара должна состоять из 3 символов (например RUB).")
+            .Must(BeAValidCurrency).WithMessage("Валюта указана неверно или не поддерживается.");
     }
 
-    private bool BeAValidCurrencyPair(string currencyPair)
+    private bool BeAValidCurrency(string currency)
     {
-        if (currencyPair.Length != 6) return false;
+        if (currency.Length != 3) return false;
 
-        var baseCurrency = currencyPair.Substring(0, 3);
-        var nextCurrency = currencyPair.Substring(3, 3);
-
-        return Enum.TryParse<Currencies>(baseCurrency, out _) && Enum.TryParse<Currencies>(nextCurrency, out _);
+        return Enum.TryParse<Currencies>(currency, out _);
     }
 }

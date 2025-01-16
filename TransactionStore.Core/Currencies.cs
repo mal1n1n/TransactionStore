@@ -1,6 +1,7 @@
 ﻿namespace TransactionStore.Core;
 public enum Currencies
 {
+    Unknown = 0,
     RUB, // Russian Ruble
     USD, // United States Dollar
     EUR, // Euro

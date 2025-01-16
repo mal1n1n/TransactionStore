@@ -17,10 +17,7 @@ public class TransactionController : ControllerBase
 
     [HttpGet("{transactionId}")]
     [EndpointSummary("Получение транзакции по Id")]
-    [EndpointDescription(
-        "Передача currency в запросе необходима для того, чтобы вернулся текущий курс валюты<br>" +
-        "Если currency не был указан, курс будет null")]
-    public ActionResult<TransactionResponse> GetTransactionById(Guid transactionId,[FromQuery] string? currency)
+    public ActionResult<TransactionResponse> GetTransactionById(Guid transactionId)
     {
         var response = new TransactionResponse();
         return Ok(response);
@@ -28,14 +25,14 @@ public class TransactionController : ControllerBase
 
     [HttpPost("deposit")]
     [EndpointSummary("Создание транзакции на пополнение")]
-    public ActionResult CreateDepositTransaction([FromBody] CreateDepositRequest request)
+    public ActionResult CreateDepositTransaction([FromBody] CreateTransactionRequest request)
     {
         return Ok();
     }
 
     [HttpPost("withdraw")]
     [EndpointSummary("Создание транзакции на снятие средств")]
-    public ActionResult CreateWithdrawalTransaction([FromBody] CreateWithdrawalRequest request)
+    public ActionResult CreateWithdrawalTransaction([FromBody] CreateTransactionRequest request)
     {
         return Ok();
     }

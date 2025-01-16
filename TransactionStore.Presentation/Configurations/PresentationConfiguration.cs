@@ -2,7 +2,7 @@
 
 public static class ApplicationConfiguration
 {
-    public static void ConfigureApplication(this WebApplication app)
+    public static void ConfigurePresentation(this WebApplication app)
     {
         app.UseSwagger();
         app.UseSwaggerUI();

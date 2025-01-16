@@ -1,9 +1,9 @@
 ﻿using FluentValidation;
 
 namespace TransactionStore.Presentation.DTOs.Requests.Validators;
-public class CreateWithdrawalRequestValidator : AbstractValidator<CreateWithdrawalRequest>
+public class CreateTransactionRequestValidator : AbstractValidator<CreateTransactionRequest>
 {
-    public CreateWithdrawalRequestValidator()
+    public CreateTransactionRequestValidator()
     {
         RuleFor(x => x.AccountId)
             .NotEmpty().WithMessage("AccountId обязателен для заполнения.");
