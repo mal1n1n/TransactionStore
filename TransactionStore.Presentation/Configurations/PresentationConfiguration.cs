@@ -1,6 +1,6 @@
 ﻿namespace TransactionStore.Presentation.Configurations;
 
-public static class ApplicationConfiguration
+public static class PresentationConfiguration
 {
     public static void ConfigurePresentation(this WebApplication app)
     {
