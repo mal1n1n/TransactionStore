@@ -11,7 +11,7 @@ internal static class TransactionModelCreating
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
             entity.Property(e => e.Date)
-                .HasColumnType("date")
+                .HasColumnType("timestamp")
                 .HasDefaultValueSql("NOW()");
             entity.Property(e => e.AccountId).IsRequired();
         });

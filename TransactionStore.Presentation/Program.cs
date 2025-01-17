@@ -1,23 +1,14 @@
-using FluentValidation.AspNetCore;
-using Microsoft.EntityFrameworkCore;
-using TransactionStore.Persistence.Data;
+using TransactionStore.Presentation.Configurations;
+using TransactionStore.Persistence.Configurations;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddFluentValidationAutoValidation();
-builder.Services.AddDbContext<ApplicationDbContext>(options =>   
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
-);
+builder.Services.ConfigurePresentationServices();
+builder.Services.ConfigureDbContext(builder.Configuration);
+builder.Services.ConfigureFluentValidators();
 
 var app = builder.Build();
-
-app.UseSwagger();
-app.UseSwaggerUI();
-app.UseHttpsRedirection();
-app.UseAuthorization();
-app.MapControllers();
-
+//app.UseIPFilter("127.0.0.1");
+app.ConfigureCustomExceptionMiddleware();
+app.ConfigurePresentation();
 app.Run();
