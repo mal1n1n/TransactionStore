@@ -13,11 +13,11 @@ public class CreateTransferRequestValidator : AbstractValidator<CreateTransferRe
         RuleFor(x => x.Amount)
             .GreaterThan(0).WithMessage("Сумма должна быть больше нуля.");
         RuleFor(x => x.FromCurrency)
-            .NotEqual(Currencies.Unknown).WithMessage("Валюта указана неверно или не поддерживается.")
+            .NotEqual(CurrencyType.Unknown).WithMessage("Валюта указана неверно или не поддерживается.")
             .NotEqual(x => x.ToCurrency).WithMessage("Валюты должны быть разными.")
             .IsInEnum().WithMessage("Валюта указана неверно или не поддерживается.");
         RuleFor(x => x.ToCurrency)
-            .NotEqual(Currencies.Unknown).WithMessage("Валюта указана неверно или не поддерживается.")
+            .NotEqual(CurrencyType.Unknown).WithMessage("Валюта указана неверно или не поддерживается.")
             .NotEqual(x => x.FromCurrency).WithMessage("Валюты должны быть разными.")
             .IsInEnum().WithMessage("Валюта указана неверно или не поддерживается.");
     }

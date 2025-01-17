@@ -1,4 +1,7 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using TransactionStore.Application.Interfaces;
+using TransactionStore.Persistence.Interfaces;
 using TransactionStore.Presentation.DTOs.Responses;
 
 namespace TransactionStore.Domain.Controllers;
@@ -8,23 +11,29 @@ namespace TransactionStore.Domain.Controllers;
 public class AccountController : ControllerBase
 {
     private readonly ILogger<AccountController> _logger;
-
-    public AccountController(ILogger<AccountController> logger)
+    private readonly ITransactionService _transactionService;
+    private readonly IMapper _mapper;
+    public AccountController(ILogger<AccountController> logger, ITransactionService transactionService,IMapper mapper)
     {
         _logger = logger;
+        _transactionService = transactionService;
+        _mapper = mapper;
     }
 
     [HttpGet("{accountId}/balance")]
     [EndpointSummary("Получение баланса аккаунта")]
-    public ActionResult<BalanceResponse> GetBalance(Guid accountId)
+    public async Task<ActionResult<BalanceResponse>> GetBalance(Guid accountId)
     {
+        var balance = await _transactionService.CountUserBalance(accountId);
         return Ok(new BalanceResponse());
     }
 
     [HttpGet("{accountId}/transactions")]
     [EndpointSummary("Получение транзакций аккаунта")]
-    public ActionResult<List<ShortTransactionResponse>> GetTransactions(Guid accountId)
+    public async Task<ActionResult<List<ShortTransactionResponse>>> GetTransactions(Guid accountId)
     {
-        return Ok(new List<ShortTransactionResponse>() { new ShortTransactionResponse()});
+        var transactions = await _transactionService.GetTransactionsByAccountIdAsync(accountId);
+        var mappedTransactions = _mapper.Map<List<ShortTransactionResponse>>(transactions);
+        return Ok(mappedTransactions);
     }
 }
