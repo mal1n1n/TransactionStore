@@ -23,10 +23,15 @@ public class TransactionService(
 
         return mapper.Map<TransactionModel>(transaction);
     }
-    public async Task<decimal> CountUserBalance(Guid accountId)
+    public async Task<AccountBalanceModel> CountAccountBalance(Guid accountId)
     {
         var transactions = await transactionRepository.FindAsync(t => t.AccountId == accountId);
-        return transactions.Sum(t => t.Amount);
+        var balanceModel = new AccountBalanceModel()
+        {
+            AccountId = accountId,
+            Balance = transactions.Sum(t => t.Amount)
+        };
+        return balanceModel;
     }
     public async Task<IEnumerable<TransactionModel>> GetTransactionsByAccountIdAsync(Guid accountId)
     {

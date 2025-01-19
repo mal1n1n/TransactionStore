@@ -18,13 +18,9 @@ public class AccountController(
     [EndpointSummary("Получение баланса аккаунта")]
     public async Task<ActionResult<BalanceResponse>> GetBalance(Guid accountId)
     {
-        var balance = await transactionService.CountUserBalance(accountId);
-        var response = new BalanceResponse()
-        {
-            AccountId = accountId,
-            Balance = balance
-        };
-        return Ok(response);
+        var balance = await transactionService.CountAccountBalance(accountId);
+        var mappedBalance = mapper.Map<BalanceResponse>(balance);
+        return Ok(mappedBalance);
     }
 
     [HttpGet("{accountId}/transactions")]
