@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TransactionStore.Persistence.Data;
 
 namespace TransactionStore.Persistence.Configurations;
-public static class PersistanceServices
+public static class PersistenceServices
 {
     public static void ConfigureDbContext(this IServiceCollection services, IConfiguration configuration)
     {

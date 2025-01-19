@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
+using TransactionStore.Application.Interfaces;
+using TransactionStore.Application.Models;
+using TransactionStore.Core;
 using TransactionStore.Presentation.DTOs.Requests;
 using TransactionStore.Presentation.DTOs.Responses;
 
@@ -6,41 +10,47 @@ namespace TransactionStore.Presentation.Controllers;
 
 [ApiController]
 [Route("api/v1/transactions")]
-public class TransactionController : ControllerBase
+public class TransactionController(
+        ILogger<TransactionController> logger, 
+        ITransactionService transactionService,
+        IMapper mapper) 
+    : ControllerBase
 {
-    private readonly ILogger<TransactionController> _logger;
-
-    public TransactionController(ILogger<TransactionController> logger)
-    {
-        _logger = logger;
-    }
-
     [HttpGet("{transactionId}")]
     [EndpointSummary("Получение транзакции по Id")]
-    public ActionResult<TransactionResponse> GetTransactionById(Guid transactionId)
+    public async Task<ActionResult<TransactionResponse>> GetTransactionById(Guid transactionId)
     {
-        var response = new TransactionResponse();
+        var transaction = await transactionService.GetTransactionByIdAsync(transactionId);
+        var response = mapper.Map<TransactionResponse>(transaction);
         return Ok(response);
     }
 
     [HttpPost("deposit")]
     [EndpointSummary("Создание транзакции на пополнение")]
-    public ActionResult CreateDepositTransaction([FromBody] CreateTransactionRequest request)
+    public async Task<ActionResult<Guid>> CreateDepositTransaction([FromBody] CreateTransactionRequest request)
     {
-        return Ok();
+        var transaction = mapper.Map<TransactionModel>(request);
+        transaction.TransactionType = TransactionType.Deposit;
+        var response = await transactionService.CreateTransaction(transaction,TransactionType.Deposit);
+        return Ok(response);
     }
 
     [HttpPost("withdraw")]
     [EndpointSummary("Создание транзакции на снятие средств")]
-    public ActionResult CreateWithdrawalTransaction([FromBody] CreateTransactionRequest request)
+    public async Task<ActionResult<Guid>> CreateWithdrawalTransaction([FromBody] CreateTransactionRequest request)
     {
-        return Ok();
+        var transaction = mapper.Map<TransactionModel>(request);
+        transaction.TransactionType = TransactionType.Withdrawal;
+        var response = await transactionService.CreateTransaction(transaction, TransactionType.Withdrawal);
+        return Ok(response);
     }
 
     [HttpPost("transfer")]
     [EndpointSummary("Создание трансферной транзакции")]
-    public ActionResult CreateTransferTransaction([FromBody] CreateTransferRequest request)
+    public async Task<ActionResult<IEnumerable<Guid>>> CreateTransferTransaction([FromBody] CreateTransferRequest request)
     {
-        return Ok();
+        var mappedTrans = mapper.Map<TransferTransactionModel>(request);
+        var response = await transactionService.CreateTransferTransaction(mappedTrans);
+        return Ok(response);
     }
 }
