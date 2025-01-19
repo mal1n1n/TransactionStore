@@ -8,5 +8,6 @@ public static class ApplicationConfiguration
     public static void ConfigureApplication(this IServiceCollection services)
     {
         services.AddScoped<ITransactionService, TransactionService>();
+        services.AddScoped<ICurrencyExchangeClient, CurrencyExchangeClient>();
     }
 }

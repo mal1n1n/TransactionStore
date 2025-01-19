@@ -10,5 +10,7 @@ public class TransactionDtoMapperProfile: Profile
     {
         CreateMap<TransactionModel, TransactionResponse>();
         CreateMap<TransactionModel, ShortTransactionResponse>();
+        CreateMap<CreateTransactionRequest, TransactionModel>();
+        CreateMap<CreateTransferRequest, TransferTransactionModel>();
     }
 }

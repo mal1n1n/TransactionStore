@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using TransactionStore.Persistence.Entities;
 using TransactionStore.Persistence.Interfaces;
 using TransactionStore.Persistence.Repositories;
 
