@@ -19,15 +19,20 @@ public class AccountController(
     public async Task<ActionResult<BalanceResponse>> GetBalance(Guid accountId)
     {
         var balance = await transactionService.CountUserBalance(accountId);
-        return Ok(new BalanceResponse());
+        var response = new BalanceResponse()
+        {
+            AccountId = accountId,
+            Balance = balance
+        };
+        return Ok(response);
     }
 
     [HttpGet("{accountId}/transactions")]
     [EndpointSummary("Получение транзакций аккаунта")]
-    public async Task<ActionResult<List<ShortTransactionResponse>>> GetTransactions(Guid accountId)
+    public async Task<ActionResult<List<TransactionResponse>>> GetTransactions(Guid accountId)
     {
         var transactions = await transactionService.GetTransactionsByAccountIdAsync(accountId);
-        var mappedTransactions = mapper.Map<List<ShortTransactionResponse>>(transactions);
+        var mappedTransactions = mapper.Map<List<TransactionResponse>>(transactions);
         return Ok(mappedTransactions);
     }
 }

@@ -31,7 +31,7 @@ public class TransactionController(
     {
         var transaction = mapper.Map<TransactionModel>(request);
         transaction.TransactionType = TransactionType.Deposit;
-        var response = await transactionService.CreateTransaction(transaction);
+        var response = await transactionService.CreateTransaction(transaction,TransactionType.Deposit);
         return Ok(response);
     }
 
@@ -41,7 +41,7 @@ public class TransactionController(
     {
         var transaction = mapper.Map<TransactionModel>(request);
         transaction.TransactionType = TransactionType.Withdrawal;
-        var response = await transactionService.CreateTransaction(transaction);
+        var response = await transactionService.CreateTransaction(transaction, TransactionType.Withdrawal);
         return Ok(response);
     }
 
@@ -51,6 +51,6 @@ public class TransactionController(
     {
         var mappedTrans = mapper.Map<TransferTransactionModel>(request);
         var response = await transactionService.CreateTransferTransaction(mappedTrans);
-        return Ok();
+        return Ok(response);
     }
 }

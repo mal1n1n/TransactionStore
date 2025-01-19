@@ -20,5 +20,8 @@ public class CreateTransferRequestValidator : AbstractValidator<CreateTransferRe
             .NotEqual(CurrencyType.Unknown).WithMessage("Валюта указана неверно или не поддерживается.")
             .NotEqual(x => x.FromCurrency).WithMessage("Валюты должны быть разными.")
             .IsInEnum().WithMessage("Валюта указана неверно или не поддерживается.");
+        RuleFor(x => x)
+            .Must(x => x.FromAccountId != x.ToAccountId)
+            .WithMessage("FromAccountId и ToAccountId не должны быть идентичными.");
     }
 }

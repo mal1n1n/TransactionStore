@@ -8,8 +8,8 @@ public class TransactionDtoMapperProfile: Profile
 {
     public TransactionDtoMapperProfile()
     {
-        CreateMap<TransactionModel, TransactionResponse>();
-        CreateMap<TransactionModel, ShortTransactionResponse>();
+        CreateMap<TransactionModel, TransactionResponse>()
+            .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.TransactionType));
         CreateMap<CreateTransactionRequest, TransactionModel>();
         CreateMap<CreateTransferRequest, TransferTransactionModel>();
     }

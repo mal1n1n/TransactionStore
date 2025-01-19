@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using TransactionStore.Application.Factories;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Services;
 
@@ -9,5 +10,6 @@ public static class ApplicationConfiguration
     {
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<ICurrencyExchangeClient, CurrencyExchangeClient>();
+        services.AddScoped<ITransactionFactory, TransactionFactory>();
     }
 }
