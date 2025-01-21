@@ -43,6 +43,21 @@ public class BaseRepository<TEntity>(
         await DbSet.AddRangeAsync(entities);
         await Context.SaveChangesAsync();
     }
+    public async Task TransactionalAddRangeAsync(IEnumerable<TEntity> entities)
+    {
+        using var transaction = await Context.Database.BeginTransactionAsync();
+        try
+        {
+            await DbSet.AddRangeAsync(entities);
+            await Context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
 
     public virtual async Task UpdateAsync(TEntity entity)
     {

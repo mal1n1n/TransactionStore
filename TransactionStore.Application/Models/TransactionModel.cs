@@ -7,4 +7,5 @@ public class TransactionModel
     public decimal Amount { get; set; }
     public DateTime Date { get; set; }
     public TransactionType TransactionType { get; set; }
+    public TransactionModel? RelatedTransaction { get; set; }
 }

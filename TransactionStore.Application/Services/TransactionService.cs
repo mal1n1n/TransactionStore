@@ -21,43 +21,76 @@ public class TransactionService(
         if (transaction == null)
             throw new TransactionNotFoundException($"Transaction with id {id} not found");
 
-        return mapper.Map<TransactionModel>(transaction);
+        var transactionModel = mapper.Map<TransactionModel>(transaction);
+
+        if (transaction.TransactionType == TransactionType.Transfer)
+        {
+            var relatedTransaction = await transactionRepository.FindAsync(t =>
+                t.Date == transaction.Date && 
+                t.Id != transaction.Id && 
+                t.TransactionType == TransactionType.Transfer);
+
+            if (relatedTransaction.Any())
+            {
+                var related = relatedTransaction.First();
+                transactionModel.RelatedTransaction = mapper.Map<TransactionModel>(related);
+            }
+        }
+        return transactionModel;
     }
     public async Task<AccountBalanceModel> CountAccountBalance(Guid accountId)
     {
         var transactions = await transactionRepository.FindAsync(t => t.AccountId == accountId);
+        var balance = transactions.Sum(t => t.Amount);
         var balanceModel = new AccountBalanceModel()
         {
             AccountId = accountId,
-            Balance = transactions.Sum(t => t.Amount)
+            Balance = balance
         };
         return balanceModel;
     }
     public async Task<IEnumerable<TransactionModel>> GetTransactionsByAccountIdAsync(Guid accountId)
     {
         var transactions = await transactionRepository.FindAsync(t => t.AccountId == accountId);
-        // Получение всех связанных трансферных транзакций
-        var transferTransactions = transactions
+
+        // Получаем все даты трансферных транзакций
+        var transferDates = transactions
             .Where(t => t.TransactionType == TransactionType.Transfer)
             .Select(t => t.Date)
-            .Distinct();
-        
+            .Distinct()
+            .ToList();
+
+        // Получаем все связанные трансферные транзакции
         var relatedTransactions = await transactionRepository.FindAsync(t =>
-            transferTransactions.Contains(t.Date) &&
-            t.AccountId != accountId);
+            transferDates.Contains(t.Date) && 
+            t.AccountId != accountId && 
+            t.TransactionType == TransactionType.Transfer);
 
-        // Объединение найденных транзакций
-        var allTransactions = transactions
-            .Concat(relatedTransactions)
-            .ToList();
-        // Хз,моя ли задача сортировать найденные транзакции аккаунта, но вот
-        // Сортировка транзакций по дате от актуальной к старой (если трансфер - сначала идут входящие, потом исходящие)
-        allTransactions = allTransactions
+        // Словарь для быстрого поиска связанных транзакций
+        var relatedTransactionsDict = relatedTransactions
+            .GroupBy(t => t.Date)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        // Формируем список транзакций и добавляем связанные транзакции для трансферных
+        var transactionModels = transactions.Select(transaction =>
+        {
+            var transactionModel = mapper.Map<TransactionModel>(transaction);
+            if (transaction.TransactionType == TransactionType.Transfer)
+            {
+                relatedTransactionsDict.TryGetValue(transaction.Date, out var relatedTransactionModel);
+                if (relatedTransactionModel == null)
+                    throw new TransactionNotFoundException($"Related transaction for transaction {transaction.Id} not found (Антон был прав(возможно))");
+                transactionModel.RelatedTransaction = mapper.Map<TransactionModel>(relatedTransactionModel);
+            }
+            return transactionModel;
+        }).ToList();
+
+        // Сортировка транзакций по дате от актуальной к старой
+        transactionModels = transactionModels
             .OrderByDescending(t => t.Date)
-            .ThenBy(t => t.TransactionType == TransactionType.Transfer && t.Amount > 0 ? 0 : 1)
             .ToList();
 
-        return mapper.Map<IEnumerable<TransactionModel>>(allTransactions);
+        return transactionModels;
     }
 
     public async Task<Guid> CreateTransaction(TransactionModel transactionModel,TransactionType transactionType)
@@ -71,7 +104,7 @@ public class TransactionService(
     {
         var exchangeRate = await currencyExchangeClient.GetExchangeRateAsync(transferModel.FromCurrency, transferModel.ToCurrency);
         var (transFrom, transTo) = transactionFactory.CreateTransferTransaction(transferModel, exchangeRate);
-        await transactionRepository.AddRangeAsync([transFrom, transTo]);
+        await transactionRepository.TransactionalAddRangeAsync([transFrom, transTo]);
         return [transFrom.Id, transTo.Id];
     }
 }
