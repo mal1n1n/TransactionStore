@@ -1,4 +1,5 @@
-﻿using TransactionStore.Core;
+﻿using System.Text.Json.Serialization;
+using TransactionStore.Core;
 
 namespace TransactionStore.Presentation.DTOs.Responses;
 public class TransactionResponse
@@ -8,4 +9,6 @@ public class TransactionResponse
     public decimal Amount { get; set; }
     public TransactionType Type { get; set; }
     public DateTime Date { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public TransactionResponse? RelatedTransaction { get; set; }
 }

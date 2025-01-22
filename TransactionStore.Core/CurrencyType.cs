@@ -1,5 +1,5 @@
 ﻿namespace TransactionStore.Core;
-public enum Currencies
+public enum CurrencyType
 {
     Unknown = 0,
     RUB, // Russian Ruble
