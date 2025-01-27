@@ -44,6 +44,12 @@ namespace TransactionStore.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AccountId", "Date")
+                        .HasDatabaseName("IX_Transaction_AccountId_Date");
+
+                    b.HasIndex("Date", "TransactionType")
+                        .HasDatabaseName("IX_Transaction_Date_TransactionType");
+
                     b.ToTable("Transactions");
                 });
 #pragma warning restore 612, 618

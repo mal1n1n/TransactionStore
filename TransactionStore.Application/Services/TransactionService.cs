@@ -1,10 +1,8 @@
 ﻿using AutoMapper;
-using System.Collections.Generic;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Models;
 using TransactionStore.Core;
-using TransactionStore.Persistence.Entities;
 using TransactionStore.Persistence.Interfaces;
 
 namespace TransactionStore.Application.Services;
@@ -35,6 +33,7 @@ public class TransactionService(
                 var related = relatedTransaction.First();
                 transactionModel.RelatedTransaction = mapper.Map<TransactionModel>(related);
             }
+            else throw new TransactionNotFoundException($"Related transaction for transaction {transaction.Id} not found");
         }
         return transactionModel;
     }
@@ -66,6 +65,9 @@ public class TransactionService(
             t.AccountId != accountId && 
             t.TransactionType == TransactionType.Transfer);
 
+        if (relatedTransactions == null)
+            throw new TransactionNotFoundException($"No related transactions found for account {accountId}");
+
         // Словарь для быстрого поиска связанных транзакций
         var relatedTransactionsDict = relatedTransactions
             .GroupBy(t => t.Date)
@@ -79,7 +81,7 @@ public class TransactionService(
             {
                 relatedTransactionsDict.TryGetValue(transaction.Date, out var relatedTransactionModel);
                 if (relatedTransactionModel == null)
-                    throw new TransactionNotFoundException($"Related transaction for transaction {transaction.Id} not found (Антон был прав(возможно))");
+                    throw new TransactionNotFoundException($"Related transaction for transaction {transaction.Id} not found");
                 transactionModel.RelatedTransaction = mapper.Map<TransactionModel>(relatedTransactionModel);
             }
             return transactionModel;
@@ -103,6 +105,8 @@ public class TransactionService(
     public async Task<IEnumerable<Guid>> CreateTransferTransaction(TransferTransactionModel transferModel)
     {
         var exchangeRate = await currencyExchangeClient.GetExchangeRateAsync(transferModel.FromCurrency, transferModel.ToCurrency);
+        if (exchangeRate <= 0)
+            throw new InvalidOperationException("Invalid exchange rate");
         var (transFrom, transTo) = transactionFactory.CreateTransferTransaction(transferModel, exchangeRate);
         await transactionRepository.TransactionalAddRangeAsync([transFrom, transTo]);
         return [transFrom.Id, transTo.Id];
