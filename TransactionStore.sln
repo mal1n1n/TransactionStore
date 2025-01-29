@@ -15,7 +15,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransactionStore.Core", "Tr
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{A7184D82-15CB-4FCF-8A37-4591781D1D03}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransactionStore.Tests", "..\TransactionStore.Tests\TransactionStore.Tests.csproj", "{C4930AF7-5F75-49CF-88C7-09CAB6D2EC79}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransactionStore.Tests", "TransactionStore.Tests\TransactionStore.Tests.csproj", "{C4930AF7-5F75-49CF-88C7-09CAB6D2EC79}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
