@@ -13,6 +13,7 @@
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="13.0.1" />
     <PackageReference Include="coverlet.collector" Version="6.0.2" />
+    <PackageReference Include="FluentAssertions" Version="8.0.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="ReportGenerator" Version="5.4.3" />
@@ -21,10 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TransactionStore\TransactionStore.Application\TransactionStore.Application.csproj" />
-    <ProjectReference Include="..\TransactionStore\TransactionStore.Core\TransactionStore.Core.csproj" />
-    <ProjectReference Include="..\TransactionStore\TransactionStore.Persistence\TransactionStore.Persistence.csproj" />
-    <ProjectReference Include="..\TransactionStore\TransactionStore.Presentation\TransactionStore.Presentation.csproj" />
+    <ProjectReference Include="..\TransactionStore.Application\TransactionStore.Application.csproj" />
+    <ProjectReference Include="..\TransactionStore.Presentation\TransactionStore.Presentation.csproj" />
   </ItemGroup>
 
   <ItemGroup>

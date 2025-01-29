@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -38,12 +39,13 @@ public class TransactionControllerTests
     {
         // Arrange
         var transactionId = Guid.NewGuid();
-        var transactionModel = new TransactionModel { 
-            Id = transactionId, 
-            AccountId = Guid.NewGuid(), 
-            Amount = 100, 
-            TransactionType = TransactionType.Deposit, 
-            Date = DateTime.UtcNow 
+        var transactionModel = new TransactionModel
+        {
+            Id = transactionId,
+            AccountId = Guid.NewGuid(),
+            Amount = 100,
+            TransactionType = TransactionType.Deposit,
+            Date = DateTime.UtcNow
         };
         var transactionResponse = mapper.Map<TransactionResponse>(transactionModel);
 
@@ -54,13 +56,10 @@ public class TransactionControllerTests
         var result = await _sut.GetTransactionById(transactionId);
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
-        var response = Assert.IsType<TransactionResponse>(okResult.Value);
-        Assert.Equal(transactionId, response.Id);
-        Assert.Equal(transactionModel.AccountId, response.AccountId);
-        Assert.Equal(transactionModel.Amount, response.Amount);
-        Assert.Equal(transactionModel.TransactionType, response.Type);
-        Assert.Equal(transactionModel.Date, response.Date);
+        var okResult = result.Result as OkObjectResult;
+        okResult.Should().NotBeNull();
+        var response = okResult.Value as TransactionResponse;
+        response.Should().BeEquivalentTo(transactionResponse);
     }
 
     [Fact]
@@ -88,9 +87,10 @@ public class TransactionControllerTests
         var result = await _sut.CreateDepositTransaction(request);
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
-        var response = Assert.IsType<Guid>(okResult.Value);
-        Assert.Equal(transactionModel.Id, response);
+        var okResult = result.Result as OkObjectResult;
+        okResult.Should().NotBeNull();
+        var response = okResult.Value as Guid?;
+        response.Should().Be(transactionModel.Id);
     }
 
     [Fact]
@@ -118,9 +118,10 @@ public class TransactionControllerTests
         var result = await _sut.CreateWithdrawalTransaction(request);
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
-        var response = Assert.IsType<Guid>(okResult.Value);
-        Assert.Equal(transactionModel.Id, response);
+        var okResult = result.Result as OkObjectResult;
+        okResult.Should().NotBeNull();
+        var response = okResult.Value as Guid?;
+        response.Should().Be(transactionModel.Id);
     }
 
     [Fact]
@@ -151,8 +152,9 @@ public class TransactionControllerTests
         var result = await _sut.CreateTransferTransaction(request);
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
-        var response = Assert.IsType<List<Guid>>(okResult.Value);
-        Assert.Equal(transactionIds, response);
+        var okResult = result.Result as OkObjectResult;
+        okResult.Should().NotBeNull();
+        var response = okResult.Value as List<Guid>;
+        response.Should().BeEquivalentTo(transactionIds);
     }
 }

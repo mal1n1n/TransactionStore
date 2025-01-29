@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using FluentAssertions;
 using Moq;
 using System.Linq.Expressions;
 using TransactionStore.Application.Exceptions;
@@ -8,6 +9,7 @@ using TransactionStore.Application.Services;
 using TransactionStore.Core;
 using TransactionStore.Persistence.Entities;
 using TransactionStore.Persistence.Interfaces;
+using Xunit;
 
 namespace TransactionStore.Tests
 {
@@ -42,9 +44,12 @@ namespace TransactionStore.Tests
             // Arrange
             var transactionId = Guid.NewGuid();
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<TransactionNotFoundException>(() => _sut.GetTransactionByIdAsync(transactionId));
-            Assert.Equal($"Transaction with id {transactionId} not found", exception.Message);
+            // Act
+            Func<Task> act = async () => await _sut.GetTransactionByIdAsync(transactionId);
+
+            // Assert
+            await act.Should().ThrowAsync<TransactionNotFoundException>()
+                .WithMessage($"Transaction with id {transactionId} not found");
         }
 
         [Fact]
@@ -58,19 +63,19 @@ namespace TransactionStore.Tests
                 Date = DateTime.UtcNow,
                 TransactionType = TransactionType.Transfer
             };
-            var transactionModel = new TransactionModel { Id = transactionId };
 
             _transactionRepository.Setup(repo => repo.GetByIdAsync(transactionId))
                 .ReturnsAsync(transaction);
-            _transactionRepository.Setup(repo => repo.FindAsync(t =>
-                t.Date == transaction.Date &&
-                t.Id != transaction.Id &&
-                t.TransactionType == TransactionType.Transfer))
-                .ReturnsAsync([]);
+            _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
+                predicate.Compile().Invoke(new Transaction { Date = transaction.Date, Id = Guid.NewGuid(), TransactionType = TransactionType.Transfer }))))
+                .ReturnsAsync(new List<Transaction>());
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<TransactionNotFoundException>(() => _sut.GetTransactionByIdAsync(transactionId));
-            Assert.Equal($"Related transaction for transaction {transaction.Id} not found", exception.Message);
+            // Act
+            Func<Task> act = async () => await _sut.GetTransactionByIdAsync(transactionId);
+
+            // Assert
+            await act.Should().ThrowAsync<TransactionNotFoundException>()
+                .WithMessage($"Related transaction for transaction {transaction.Id} not found");
         }
 
         [Fact]
@@ -84,22 +89,32 @@ namespace TransactionStore.Tests
                 Date = DateTime.UtcNow,
                 TransactionType = TransactionType.Transfer
             };
-            var transactionModel = new TransactionModel { Id = transactionId };
+            var transactionModel = _mapper.Map<TransactionModel>(transaction);
+            var relatedTransaction = new Transaction
+            {
+                Id = Guid.NewGuid(),
+                Date = transaction.Date,
+                TransactionType = TransactionType.Transfer
+            };
+            var transactionWithRelated = new TransactionModel
+            {
+                Id = transactionId,
+                Date = transaction.Date,
+                TransactionType = TransactionType.Transfer,
+                RelatedTransaction = _mapper.Map<TransactionModel>(relatedTransaction)
+            };
 
             _transactionRepository.Setup(repo => repo.GetByIdAsync(transactionId))
                 .ReturnsAsync(transaction);
-            _transactionRepository.Setup(repo => repo.FindAsync(t =>
-                t.Date == transaction.Date &&
-                t.Id != transaction.Id &&
-                t.TransactionType == TransactionType.Transfer))
-                .ReturnsAsync([transaction]);
+            _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
+                predicate.Compile().Invoke(new Transaction { Date = transaction.Date, Id = Guid.NewGuid(), TransactionType = TransactionType.Transfer }))))
+                .ReturnsAsync(new List<Transaction> { relatedTransaction });
 
             // Act
             var result = await _sut.GetTransactionByIdAsync(transactionId);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Equal(transactionId, result.Id);
+            result.Should().BeEquivalentTo(transactionWithRelated);
         }
 
         [Fact]
@@ -113,7 +128,7 @@ namespace TransactionStore.Tests
                 Date = DateTime.UtcNow,
                 TransactionType = TransactionType.Deposit
             };
-            var transactionModel = new TransactionModel { Id = transactionId };
+            var transactionModel = _mapper.Map<TransactionModel>(transaction);
 
             _transactionRepository.Setup(repo => repo.GetByIdAsync(transactionId))
                 .ReturnsAsync(transaction);
@@ -122,9 +137,7 @@ namespace TransactionStore.Tests
             var result = await _sut.GetTransactionByIdAsync(transactionId);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Equal(transactionId, result.Id);
-            Assert.Equal(TransactionType.Deposit, result.TransactionType);
+            result.Should().BeEquivalentTo(transactionModel);
         }
 
         [Fact]
@@ -133,16 +146,16 @@ namespace TransactionStore.Tests
             // Arrange
             var accountId = Guid.NewGuid();
 
-            _transactionRepository.Setup(repo => repo.FindAsync(t => t.AccountId == accountId))
-                .ReturnsAsync([]);
+            _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
+                predicate.Compile().Invoke(new Transaction { AccountId = accountId }))))
+                .ReturnsAsync(new List<Transaction>());
 
             // Act
             var result = await _sut.CountAccountBalance(accountId);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Equal(accountId, result.AccountId);
-            Assert.Equal(0, result.Balance);
+            result.AccountId.Should().Be(accountId);
+            result.Balance.Should().Be(0);
         }
 
         [Fact]
@@ -157,16 +170,16 @@ namespace TransactionStore.Tests
                 new() { AccountId = accountId, Amount = -50 }
             };
 
-            _transactionRepository.Setup(repo => repo.FindAsync(t => t.AccountId == accountId))
+            _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
+                predicate.Compile().Invoke(new Transaction { AccountId = accountId }))))
                 .ReturnsAsync(transactions);
 
             // Act
             var result = await _sut.CountAccountBalance(accountId);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Equal(accountId, result.AccountId);
-            Assert.Equal(250, result.Balance);
+            result.AccountId.Should().Be(accountId);
+            result.Balance.Should().Be(250);
         }
 
         [Fact]
@@ -175,15 +188,15 @@ namespace TransactionStore.Tests
             // Arrange
             var accountId = Guid.NewGuid();
 
-            _transactionRepository.Setup(repo => repo.FindAsync(t => t.AccountId == accountId))
+            _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
+                predicate.Compile().Invoke(new Transaction { AccountId = accountId }))))
                 .ReturnsAsync([]);
 
             // Act
             var result = await _sut.GetTransactionsByAccountIdAsync(accountId);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Empty(result);
+            result.Should().BeEmpty();
         }
 
         [Fact]
@@ -196,16 +209,17 @@ namespace TransactionStore.Tests
                 new() { Id = Guid.NewGuid(), AccountId = accountId, Amount = 100, Date = DateTime.UtcNow, TransactionType = TransactionType.Deposit },
                 new() { Id = Guid.NewGuid(), AccountId = accountId, Amount = 200, Date = DateTime.UtcNow, TransactionType = TransactionType.Withdrawal }
             };
+            var transactionModels = _mapper.Map<List<TransactionModel>>(transactions);
 
-            _transactionRepository.Setup(repo => repo.FindAsync(t => t.AccountId == accountId))
+            _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
+                predicate.Compile().Invoke(new Transaction { AccountId = accountId }))))
                 .ReturnsAsync(transactions);
 
             // Act
             var result = await _sut.GetTransactionsByAccountIdAsync(accountId);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Equal(2, result.Count());
+            result.Should().BeEquivalentTo(transactionModels);
         }
 
         [Fact]
@@ -218,42 +232,42 @@ namespace TransactionStore.Tests
             var relatedTransactionId = Guid.NewGuid();
             var transactions = new List<Transaction>
             {
-                new() { 
-                    Id = transactionId, 
-                    AccountId = accountId, 
-                    Amount = 100, 
-                    Date = transferDate, 
-                    TransactionType = TransactionType.Transfer 
+                new()
+                {
+                    Id = transactionId,
+                    AccountId = accountId,
+                    Amount = 100,
+                    Date = transferDate,
+                    TransactionType = TransactionType.Transfer
                 }
             };
-                    var relatedTransactions = new List<Transaction>
+            var relatedTransactions = new List<Transaction>
             {
-                new() { 
-                    Id = relatedTransactionId, 
-                    AccountId = Guid.NewGuid(), 
-                    Amount = 100, 
-                    Date = transferDate, 
-                    TransactionType = TransactionType.Transfer 
+                new()
+                {
+                    Id = relatedTransactionId,
+                    AccountId = Guid.NewGuid(),
+                    Amount = 100,
+                    Date = transferDate,
+                    TransactionType = TransactionType.Transfer
                 }
             };
+            var transactionModels = _mapper.Map<List<TransactionModel>>(transactions);
+            transactionModels.First().RelatedTransaction = _mapper.Map<TransactionModel>(relatedTransactions.First());
 
-            _transactionRepository.Setup(repo => repo.FindAsync(t => t.AccountId == accountId))
-                .ReturnsAsync(transactions);
-            
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
-                predicate.Compile().Invoke(relatedTransactions.First()))))
+                predicate.Compile().Invoke(new Transaction { AccountId = accountId }))))
+                .ReturnsAsync(transactions);
+            _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
+                predicate.Compile().Invoke(new Transaction { Date = transferDate, Id = relatedTransactionId, TransactionType = TransactionType.Transfer }))))
                 .ReturnsAsync(relatedTransactions);
 
             // Act
             var result = await _sut.GetTransactionsByAccountIdAsync(accountId);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Single(result);
-            Assert.NotNull(result.First().RelatedTransaction);
-            Assert.Equal(relatedTransactionId, result.First().RelatedTransaction.Id);
+            result.Should().BeEquivalentTo(transactionModels);
         }
-
 
         [Fact]
         public async Task GetTransactionsByAccountIdAsync_NoRelatedTransactions_ThrowsTransactionNotFoundException()
@@ -266,17 +280,19 @@ namespace TransactionStore.Tests
                 new() { Id = Guid.NewGuid(), AccountId = accountId, Amount = 100, Date = transferDate, TransactionType = TransactionType.Transfer }
             };
 
-            _transactionRepository.Setup(repo => repo.FindAsync(t => t.AccountId == accountId))
+            _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
+                predicate.Compile().Invoke(new Transaction { AccountId = accountId }))))
                 .ReturnsAsync(transactions);
-            _transactionRepository.Setup(repo => repo.FindAsync(t =>
-                t.Date == transferDate &&
-                t.AccountId != accountId &&
-                t.TransactionType == TransactionType.Transfer))
+            _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
+                predicate.Compile().Invoke(new Transaction { Date = transferDate, Id = Guid.NewGuid(), TransactionType = TransactionType.Transfer }))))
                 .ReturnsAsync([]);
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<TransactionNotFoundException>(() => _sut.GetTransactionsByAccountIdAsync(accountId));
-            Assert.Equal($"Related transaction for transaction {transactions.First().Id} not found", exception.Message);
+            // Act
+            Func<Task> act = async () => await _sut.GetTransactionsByAccountIdAsync(accountId);
+
+            // Assert
+            await act.Should().ThrowAsync<TransactionNotFoundException>()
+                .WithMessage($"Related transaction for transaction {transactions.First().Id} not found");
         }
 
         [Fact]
@@ -292,14 +308,7 @@ namespace TransactionStore.Tests
                 Date = DateTime.UtcNow,
                 TransactionType = TransactionType.Deposit
             };
-            var transaction = new Transaction
-            {
-                Id = transactionId,
-                AccountId = transactionModel.AccountId,
-                Amount = transactionModel.Amount,
-                Date = transactionModel.Date,
-                TransactionType = transactionModel.TransactionType
-            };
+            var transaction = _mapper.Map<Transaction>(transactionModel);
 
             _transactionFactory.Setup(factory => factory.CreateTransaction(transactionModel, TransactionType.Deposit))
                 .Returns(transaction);
@@ -310,7 +319,7 @@ namespace TransactionStore.Tests
             var result = await _sut.CreateTransaction(transactionModel, TransactionType.Deposit);
 
             // Assert
-            Assert.Equal(transactionId, result);
+            result.Should().Be(transactionId);
         }
 
         [Fact]
@@ -356,8 +365,8 @@ namespace TransactionStore.Tests
             var result = await _sut.CreateTransferTransaction(transferModel);
 
             // Assert
-            Assert.Contains(fromTransactionId, result);
-            Assert.Contains(toTransactionId, result);
+            result.Should().Contain(fromTransactionId);
+            result.Should().Contain(toTransactionId);
         }
 
         [Fact]
@@ -377,9 +386,14 @@ namespace TransactionStore.Tests
             _currencyExchangeClient.Setup(client => client.GetExchangeRateAsync(transferModel.FromCurrency, transferModel.ToCurrency))
                 .ReturnsAsync(exchangeRate);
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.CreateTransferTransaction(transferModel));
-            Assert.Equal("Invalid exchange rate", exception.Message);
+            // Act
+            Func<Task> act = async () => await _sut.CreateTransferTransaction(transferModel);
+
+            // Assert
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("Invalid exchange rate");
         }
     }
 }
+
+
