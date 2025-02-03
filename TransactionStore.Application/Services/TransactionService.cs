@@ -59,11 +59,15 @@ public class TransactionService(
             .Distinct()
             .ToList();
 
-        // Получаем все связанные трансферные транзакции
-        var relatedTransactions = await transactionRepository.FindAsync(t =>
-            transferDates.Contains(t.Date) && 
-            t.AccountId != accountId && 
+        // Получаем все трансферные транзакции
+        var allTransferTransactions = await transactionRepository.FindAsync(t =>
+            transferDates.Contains(t.Date) &&
             t.TransactionType == TransactionType.Transfer);
+
+        // Фильтруем связанные трансферные транзакции
+        var relatedTransactions = allTransferTransactions
+            .Where(t => t.AccountId != accountId)
+            .ToList();
 
         if (relatedTransactions == null)
             throw new TransactionNotFoundException($"No related transactions found for account {accountId}");
