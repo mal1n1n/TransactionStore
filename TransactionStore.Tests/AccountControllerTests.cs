@@ -112,5 +112,9 @@ public class AccountControllerTests
         okResult.Should().NotBeNull();
         var response = okResult.Value as List<TransactionResponse>;
         response.Should().BeEquivalentTo(transactionResponses);
+
+        var transferTransaction = response.FirstOrDefault(t => t.Type == TransactionType.Transfer);
+        transferTransaction.Should().NotBeNull();
+        transferTransaction!.RelatedTransaction.Should().NotBeNull();//доп проверка, трансферная транзакция не пустая
     }
 }
