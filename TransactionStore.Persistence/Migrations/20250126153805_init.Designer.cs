@@ -12,8 +12,8 @@ using TransactionStore.Persistence.Data;
 namespace TransactionStore.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250117115726_initial")]
-    partial class initial
+    [Migration("20250126153805_init")]
+    partial class init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -46,6 +46,9 @@ namespace TransactionStore.Persistence.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("IX_Transaction_AccountId");
 
                     b.ToTable("Transactions");
                 });

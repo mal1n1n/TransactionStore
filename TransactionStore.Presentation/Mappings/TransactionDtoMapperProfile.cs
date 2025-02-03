@@ -12,5 +12,6 @@ public class TransactionDtoMapperProfile: Profile
             .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.TransactionType));
         CreateMap<CreateTransactionRequest, TransactionModel>();
         CreateMap<CreateTransferRequest, TransferTransactionModel>();
+        CreateMap<AccountBalanceModel, BalanceResponse>();
     }
 }

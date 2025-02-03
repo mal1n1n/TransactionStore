@@ -8,5 +8,6 @@ public static class MappersConfiguration
     {
         services.AddAutoMapper(typeof(TransactionMapperProfile).Assembly);
         services.AddAutoMapper(typeof(TransactionDtoMapperProfile).Assembly);
+
     }
 }
