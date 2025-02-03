@@ -68,7 +68,7 @@ namespace TransactionStore.Tests
                 .ReturnsAsync(transaction);
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { Date = transaction.Date, Id = Guid.NewGuid(), TransactionType = TransactionType.Transfer }))))
-                .ReturnsAsync(new List<Transaction>());
+                .ReturnsAsync([]);
 
             // Act
             Func<Task> act = async () => await _sut.GetTransactionByIdAsync(transactionId);
@@ -108,7 +108,7 @@ namespace TransactionStore.Tests
                 .ReturnsAsync(transaction);
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { Date = transaction.Date, Id = Guid.NewGuid(), TransactionType = TransactionType.Transfer }))))
-                .ReturnsAsync(new List<Transaction> { relatedTransaction });
+                .ReturnsAsync([relatedTransaction]);
 
             // Act
             var result = await _sut.GetTransactionByIdAsync(transactionId);
