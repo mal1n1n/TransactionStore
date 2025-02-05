@@ -152,7 +152,7 @@ namespace TransactionStore.Tests
 
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = accountId }))))
-                .ReturnsAsync(new List<Transaction>());
+                .ReturnsAsync([]);
 
             // Act
             var result = await _sut.CountAccountBalance(accountId);
@@ -313,7 +313,7 @@ namespace TransactionStore.Tests
 
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = transactionModel.AccountId }))))
-                .ReturnsAsync(new List<Transaction> { new() { AccountId = transactionModel.AccountId, Amount = 50 } });
+                .ReturnsAsync([new() { AccountId = transactionModel.AccountId, Amount = 50 }]);
 
             // Act
             Func<Task> act = async () => await _sut.CreateTransaction(transactionModel, TransactionType.Withdrawal);
@@ -364,7 +364,7 @@ namespace TransactionStore.Tests
 
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = transferModel.FromAccountId }))))
-                .ReturnsAsync(new List<Transaction> { new() { AccountId = transferModel.FromAccountId, Amount = 50 } });
+                .ReturnsAsync([new() { AccountId = transferModel.FromAccountId, Amount = 50 }]);
 
             // Act
             Func<Task> act = async () => await _sut.CreateTransferTransaction(transferModel);
