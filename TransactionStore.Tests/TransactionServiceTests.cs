@@ -152,7 +152,7 @@ namespace TransactionStore.Tests
 
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = accountId }))))
-                .ReturnsAsync(new List<Transaction>());
+                .ReturnsAsync([]);
 
             // Act
             var result = await _sut.CountAccountBalance(accountId);
@@ -300,6 +300,29 @@ namespace TransactionStore.Tests
         }
 
         [Fact]
+        public async Task CreateTransaction_InsufficientFunds_ThrowsInvalidOperationException()
+        {
+            // Arrange
+            var transactionModel = new TransactionModel
+            {
+                AccountId = Guid.NewGuid(),
+                Amount = 100,
+                Date = DateTime.UtcNow,
+                TransactionType = TransactionType.Withdrawal
+            };
+
+            _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
+                predicate.Compile().Invoke(new Transaction { AccountId = transactionModel.AccountId }))))
+                .ReturnsAsync([new() { AccountId = transactionModel.AccountId, Amount = 50 }]);
+
+            // Act
+            Func<Task> act = async () => await _sut.CreateTransaction(transactionModel, TransactionType.Withdrawal);
+
+            // Assert
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("Insufficient funds");
+        }
+        [Fact]
         public async Task CreateTransaction_ValidTransaction_ReturnsTransactionId()
         {
             // Arrange
@@ -326,6 +349,30 @@ namespace TransactionStore.Tests
             result.Should().Be(transactionId);
         }
 
+        [Fact]
+        public async Task CreateTransferTransaction_InsufficientFunds_ThrowsInvalidOperationException()
+        {
+            // Arrange
+            var transferModel = new TransferTransactionModel
+            {
+                FromAccountId = Guid.NewGuid(),
+                ToAccountId = Guid.NewGuid(),
+                Amount = 100,
+                FromCurrency = CurrencyType.USD,
+                ToCurrency = CurrencyType.EUR
+            };
+
+            _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
+                predicate.Compile().Invoke(new Transaction { AccountId = transferModel.FromAccountId }))))
+                .ReturnsAsync([new() { AccountId = transferModel.FromAccountId, Amount = 50 }]);
+
+            // Act
+            Func<Task> act = async () => await _sut.CreateTransferTransaction(transferModel);
+
+            // Assert
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("Insufficient funds");
+        }
         [Fact]
         public async Task CreateTransferTransaction_ValidTransfer_ReturnsTransactionIds()
         {
@@ -358,6 +405,10 @@ namespace TransactionStore.Tests
                 TransactionType = TransactionType.Transfer
             };
 
+            _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
+                predicate.Compile().Invoke(new Transaction { AccountId = transferModel.FromAccountId }))))
+                .ReturnsAsync(new List<Transaction> { new() { AccountId = transferModel.FromAccountId, Amount = 200 } });
+
             _currencyExchangeClient.Setup(client => client.GetExchangeRateAsync(transferModel.FromCurrency, transferModel.ToCurrency))
                 .ReturnsAsync(exchangeRate);
             _transactionFactory.Setup(factory => factory.CreateTransferTransaction(transferModel, exchangeRate))
@@ -386,6 +437,10 @@ namespace TransactionStore.Tests
                 ToCurrency = CurrencyType.EUR
             };
             var exchangeRate = 0m;
+
+            _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
+                predicate.Compile().Invoke(new Transaction { AccountId = transferModel.FromAccountId }))))
+                .ReturnsAsync([new() { AccountId = transferModel.FromAccountId, Amount = 200 }]);
 
             _currencyExchangeClient.Setup(client => client.GetExchangeRateAsync(transferModel.FromCurrency, transferModel.ToCurrency))
                 .ReturnsAsync(exchangeRate);
