@@ -53,12 +53,7 @@ public class TransactionService(
     public async Task<AccountBalanceModel> CountAccountBalance(Guid accountId)
     {
         logger.LogDebug("Entering CountAccountBalance with accountId: {AccountId}", accountId);
-        var transactions = await transactionRepository.FindAsync(t => t.AccountId == accountId);
-        if(!transactions.Any())
-            logger.LogWarning("No transactions found for account {AccountId} when tryed to count balance", accountId);
-        
-        var balance = transactions.Sum(t => t.Amount);
-        logger.LogDebug("Calculated balance: {Balance} for accountId: {AccountId}", balance, accountId);
+        var balance = await GetAccountBalance(accountId);
         var balanceModel = new AccountBalanceModel()
         {
             AccountId = accountId,
@@ -132,6 +127,17 @@ public class TransactionService(
     public async Task<Guid> CreateTransaction(TransactionModel transactionModel,TransactionType transactionType)
     {
         logger.LogDebug("Entering CreateTransaction with AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}", transactionModel.AccountId, transactionModel.Amount, transactionType);
+
+        if (transactionType == TransactionType.Withdrawal)
+        {
+            var balance = await GetAccountBalance(transactionModel.AccountId);
+            if (balance < transactionModel.Amount)
+            {
+                logger.LogError("Insufficient funds for AccountId: {AccountId}", transactionModel.AccountId);
+                throw new InvalidOperationException("Insufficient funds");
+            }
+        }
+
         var transaction = transactionFactory.CreateTransaction(transactionModel, transactionType);
         await transactionRepository.AddAsync(transaction);
         logger.LogInformation("CreateTransaction successful for AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}", transactionModel.AccountId, transactionModel.Amount, transactionType);
@@ -141,6 +147,14 @@ public class TransactionService(
     public async Task<IEnumerable<Guid>> CreateTransferTransaction(TransferTransactionModel transferModel)
     {
         logger.LogDebug("Entering CreateTransferTransaction with FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}", transferModel.FromAccountId, transferModel.ToAccountId, transferModel.Amount);
+        
+        var fromAccountBalance = await GetAccountBalance(transferModel.FromAccountId);
+        if (fromAccountBalance < transferModel.Amount)
+        {
+            logger.LogError("Insufficient funds for FromAccountId: {FromAccountId}", transferModel.FromAccountId);
+            throw new InvalidOperationException("Insufficient funds");
+        }
+
         var exchangeRate = await currencyExchangeClient.GetExchangeRateAsync(transferModel.FromCurrency, transferModel.ToCurrency);
         if (exchangeRate <= 0)
         {
@@ -151,5 +165,18 @@ public class TransactionService(
         await transactionRepository.TransactionalAddRangeAsync([transFrom, transTo]);
         logger.LogInformation("CreateTransferTransaction successful for FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}", transferModel.FromAccountId, transferModel.ToAccountId, transferModel.Amount);
         return [transFrom.Id, transTo.Id];
+    }
+    private async Task<decimal> GetAccountBalance(Guid accountId)
+    {
+        logger.LogDebug("Entering GetAccountBalance with accountId: {AccountId}", accountId);
+        var transactions = await transactionRepository.FindAsync(t => t.AccountId == accountId);
+        if (!transactions.Any())
+        {
+            logger.LogWarning("No transactions found for account {AccountId} when calculating balance", accountId);
+        }
+        var balance = transactions.Sum(t => t.Amount);
+        logger.LogDebug("Calculated balance: {Balance} for accountId: {AccountId}", balance, accountId);
+        logger.LogInformation("GetAccountBalance successful for accountId: {AccountId}, balance: {Balance}", accountId, balance);
+        return balance;
     }
 }
