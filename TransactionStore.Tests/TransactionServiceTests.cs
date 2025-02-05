@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using System.Linq.Expressions;
 using TransactionStore.Application.Exceptions;
@@ -19,6 +20,7 @@ namespace TransactionStore.Tests
         private readonly Mock<ITransactionRepository> _transactionRepository;
         private readonly Mock<ICurrencyExchangeClient> _currencyExchangeClient;
         private readonly Mock<ITransactionFactory> _transactionFactory;
+        private readonly Mock<ILogger<TransactionService>> _logger;
         private readonly TransactionService _sut;
 
         public TransactionServiceTests()
@@ -31,11 +33,13 @@ namespace TransactionStore.Tests
             _transactionRepository = new Mock<ITransactionRepository>();
             _currencyExchangeClient = new Mock<ICurrencyExchangeClient>();
             _transactionFactory = new Mock<ITransactionFactory>();
+            _logger = new Mock<ILogger<TransactionService>>();
             _sut = new TransactionService(
                 _transactionRepository.Object,
                 _mapper,
                 _currencyExchangeClient.Object,
-                _transactionFactory.Object);
+                _transactionFactory.Object,
+                _logger.Object);
         }
 
         [Fact]
