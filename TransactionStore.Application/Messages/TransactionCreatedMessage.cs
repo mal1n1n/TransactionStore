@@ -2,7 +2,7 @@
 
 namespace TransactionStore.Application.Messages;
 
-public class TransactionCreated
+public class TransactionCreatedMessage
 {
     public Guid TransactionId { get; set; }
     public Guid AccountId { get; set; }

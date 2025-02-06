@@ -29,7 +29,7 @@ public static class ApplicationConfiguration
                 {
                     e.Consumer<CurrencyExchangeRateConsumer>(context);
                 });
-                cfg.Message<TransactionCreated>(configTopology =>
+                cfg.Message<TransactionCreatedMessage>(configTopology =>
                 {
                     configTopology.SetEntityName("transactions.fanout");
                 });

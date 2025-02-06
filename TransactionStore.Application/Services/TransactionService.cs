@@ -144,7 +144,7 @@ public class TransactionService(
         var transaction = transactionFactory.CreateTransaction(transactionModel, transactionType);
         await transactionRepository.AddAsync(transaction);
 
-        await publishEndpoint.Publish(mapper.Map<TransactionCreated>(transaction));
+        await publishEndpoint.Publish(mapper.Map<TransactionCreatedMessage>(transaction));
 
         logger.LogInformation("CreateTransaction successful for AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}", transactionModel.AccountId, transactionModel.Amount, transactionType);
         return transaction.Id;
@@ -170,8 +170,8 @@ public class TransactionService(
         var (transFrom, transTo) = transactionFactory.CreateTransferTransaction(transferModel, exchangeRate);
         await transactionRepository.TransactionalAddRangeAsync([transFrom, transTo]);
 
-        await publishEndpoint.Publish(mapper.Map<TransactionCreated>(transFrom));
-        await publishEndpoint.Publish(mapper.Map<TransactionCreated>(transTo));
+        await publishEndpoint.Publish(mapper.Map<TransactionCreatedMessage>(transFrom));
+        await publishEndpoint.Publish(mapper.Map<TransactionCreatedMessage>(transTo));
 
         logger.LogInformation("CreateTransferTransaction successful for FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}", transferModel.FromAccountId, transferModel.ToAccountId, transferModel.Amount);
         return [transFrom.Id, transTo.Id];

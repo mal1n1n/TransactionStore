@@ -31,7 +31,7 @@ namespace TransactionStore.Tests
             var configuration = new MapperConfiguration(cfg =>
             {
                 cfg.CreateMap<Transaction, TransactionModel>().ReverseMap();
-                cfg.CreateMap<Transaction, TransactionCreated>();
+                cfg.CreateMap<Transaction, TransactionCreatedMessage>();
             });
             _mapper = new Mapper(configuration);
             _transactionRepository = new Mock<ITransactionRepository>();
