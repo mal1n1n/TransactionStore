@@ -161,7 +161,7 @@ public class TransactionService(
             throw new InvalidOperationException("Insufficient funds");
         }
 
-        var exchangeRate = await currencyExchangeClient.GetExchangeRateAsync(transferModel.FromCurrency, transferModel.ToCurrency);
+        var exchangeRate = currencyExchangeClient.GetExchangeRate(transferModel.FromCurrency, transferModel.ToCurrency);
         if (exchangeRate <= 0)
         {
             logger.LogCritical("Invalid exchange rate for FromCurrency: {FromCurrency}, ToCurrency: {ToCurrency}", transferModel.FromCurrency, transferModel.ToCurrency);

@@ -342,6 +342,7 @@ namespace TransactionStore.Tests
                 TransactionType = TransactionType.Deposit
             };
             var transaction = _mapper.Map<Transaction>(transactionModel);
+            var expectedMessage = _mapper.Map<TransactionCreatedMessage>(transaction);
 
             _transactionFactory.Setup(factory => factory.CreateTransaction(transactionModel, TransactionType.Deposit))
                 .Returns(transaction);
@@ -353,6 +354,13 @@ namespace TransactionStore.Tests
 
             // Assert
             result.Should().Be(transactionId);
+            _publishEndpoint.Verify(pe => pe.Publish(It.Is<TransactionCreatedMessage>(msg =>
+                msg.Id == expectedMessage.Id &&
+                msg.AccountId == expectedMessage.AccountId &&
+                msg.Amount == expectedMessage.Amount &&
+                msg.Date == expectedMessage.Date &&
+                msg.TransactionType == expectedMessage.TransactionType),
+                It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -402,6 +410,7 @@ namespace TransactionStore.Tests
                 Date = DateTime.UtcNow,
                 TransactionType = TransactionType.Transfer
             };
+            var fromTransactionMapped = _mapper.Map<TransactionCreatedMessage>(fromTransaction);
             var toTransaction = new Transaction
             {
                 Id = toTransactionId,
@@ -410,13 +419,14 @@ namespace TransactionStore.Tests
                 Date = DateTime.UtcNow,
                 TransactionType = TransactionType.Transfer
             };
+            var toTransactionMapped = _mapper.Map<TransactionCreatedMessage>(toTransaction);
 
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = transferModel.FromAccountId }))))
                 .ReturnsAsync(new List<Transaction> { new() { AccountId = transferModel.FromAccountId, Amount = 200 } });
 
-            _currencyExchangeClient.Setup(client => client.GetExchangeRateAsync(transferModel.FromCurrency, transferModel.ToCurrency))
-                .ReturnsAsync(exchangeRate);
+            _currencyExchangeClient.Setup(client => client.GetExchangeRate(transferModel.FromCurrency, transferModel.ToCurrency))
+                .Returns(exchangeRate);
             _transactionFactory.Setup(factory => factory.CreateTransferTransaction(transferModel, exchangeRate))
                 .Returns((fromTransaction, toTransaction));
             _transactionRepository.Setup(repo => repo.TransactionalAddRangeAsync(new[] { fromTransaction, toTransaction }))
@@ -428,6 +438,22 @@ namespace TransactionStore.Tests
             // Assert
             result.Should().Contain(fromTransactionId);
             result.Should().Contain(toTransactionId);
+
+            _publishEndpoint.Verify(pe => pe.Publish(It.Is<TransactionCreatedMessage>(msg =>
+                msg.Id == fromTransactionMapped.Id &&
+                msg.AccountId == fromTransactionMapped.AccountId &&
+                msg.Amount == fromTransactionMapped.Amount &&
+                msg.Date == fromTransactionMapped.Date &&
+                msg.TransactionType == fromTransactionMapped.TransactionType),
+                It.IsAny<CancellationToken>()), Times.Once);
+
+            _publishEndpoint.Verify(pe => pe.Publish(It.Is<TransactionCreatedMessage>(msg =>
+                msg.Id == toTransactionMapped.Id &&
+                msg.AccountId == toTransactionMapped.AccountId &&
+                msg.Amount == toTransactionMapped.Amount &&
+                msg.Date == toTransactionMapped.Date &&
+                msg.TransactionType == toTransactionMapped.TransactionType),
+                It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -448,8 +474,8 @@ namespace TransactionStore.Tests
                 predicate.Compile().Invoke(new Transaction { AccountId = transferModel.FromAccountId }))))
                 .ReturnsAsync([new() { AccountId = transferModel.FromAccountId, Amount = 200 }]);
 
-            _currencyExchangeClient.Setup(client => client.GetExchangeRateAsync(transferModel.FromCurrency, transferModel.ToCurrency))
-                .ReturnsAsync(exchangeRate);
+            _currencyExchangeClient.Setup(client => client.GetExchangeRate(transferModel.FromCurrency, transferModel.ToCurrency))
+                .Returns(exchangeRate);
 
             // Act
             Func<Task> act = async () => await _sut.CreateTransferTransaction(transferModel);
