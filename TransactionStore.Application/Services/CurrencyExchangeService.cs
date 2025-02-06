@@ -7,7 +7,7 @@ public class CurrencyExchangeClient(
         ILogger<CurrencyExchangeClient> logger) 
     : ICurrencyExchangeClient
 {
-    private readonly Dictionary<string, Dictionary<string, decimal>> _rates = [];
+    private readonly Dictionary<string, Dictionary<string, decimal>> _rates = new();
 
     public void UpdateRates(CurrencyType baseCurrency, Dictionary<string, decimal> rates)
     {
