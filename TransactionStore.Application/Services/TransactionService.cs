@@ -1,7 +1,9 @@
 ﻿using AutoMapper;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
+using TransactionStore.Application.Messages;
 using TransactionStore.Application.Models;
 using TransactionStore.Core;
 using TransactionStore.Persistence.Interfaces;
@@ -12,7 +14,8 @@ public class TransactionService(
         IMapper mapper, 
         ICurrencyExchangeClient currencyExchangeClient,
         ITransactionFactory transactionFactory,
-        ILogger<TransactionService> logger) 
+        ILogger<TransactionService> logger,
+        IPublishEndpoint publishEndpoint) 
     : ITransactionService
 {
     public async Task<TransactionModel> GetTransactionByIdAsync(Guid id)
@@ -140,6 +143,9 @@ public class TransactionService(
 
         var transaction = transactionFactory.CreateTransaction(transactionModel, transactionType);
         await transactionRepository.AddAsync(transaction);
+
+        await publishEndpoint.Publish(mapper.Map<TransactionCreated>(transaction));
+
         logger.LogInformation("CreateTransaction successful for AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}", transactionModel.AccountId, transactionModel.Amount, transactionType);
         return transaction.Id;
     }
@@ -163,6 +169,10 @@ public class TransactionService(
         }
         var (transFrom, transTo) = transactionFactory.CreateTransferTransaction(transferModel, exchangeRate);
         await transactionRepository.TransactionalAddRangeAsync([transFrom, transTo]);
+
+        await publishEndpoint.Publish(mapper.Map<TransactionCreated>(transFrom));
+        await publishEndpoint.Publish(mapper.Map<TransactionCreated>(transTo));
+
         logger.LogInformation("CreateTransferTransaction successful for FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}", transferModel.FromAccountId, transferModel.ToAccountId, transferModel.Amount);
         return [transFrom.Id, transTo.Id];
     }

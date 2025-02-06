@@ -1,10 +1,12 @@
 ﻿using AutoMapper;
 using FluentAssertions;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Linq.Expressions;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
+using TransactionStore.Application.Messages;
 using TransactionStore.Application.Models;
 using TransactionStore.Application.Services;
 using TransactionStore.Core;
@@ -22,24 +24,28 @@ namespace TransactionStore.Tests
         private readonly Mock<ITransactionFactory> _transactionFactory;
         private readonly Mock<ILogger<TransactionService>> _logger;
         private readonly TransactionService _sut;
+        private readonly Mock<IPublishEndpoint> _publishEndpoint;
 
         public TransactionServiceTests()
         {
             var configuration = new MapperConfiguration(cfg =>
             {
                 cfg.CreateMap<Transaction, TransactionModel>().ReverseMap();
+                cfg.CreateMap<Transaction, TransactionCreated>();
             });
             _mapper = new Mapper(configuration);
             _transactionRepository = new Mock<ITransactionRepository>();
             _currencyExchangeClient = new Mock<ICurrencyExchangeClient>();
             _transactionFactory = new Mock<ITransactionFactory>();
             _logger = new Mock<ILogger<TransactionService>>();
+            _publishEndpoint = new Mock<IPublishEndpoint>();
             _sut = new TransactionService(
                 _transactionRepository.Object,
                 _mapper,
                 _currencyExchangeClient.Object,
                 _transactionFactory.Object,
-                _logger.Object);
+                _logger.Object,
+                _publishEndpoint.Object);
         }
 
         [Fact]

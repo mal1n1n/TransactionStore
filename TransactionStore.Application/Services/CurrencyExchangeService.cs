@@ -1,19 +1,36 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Text.Json;
+using System.Collections.Concurrent;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Core;
-using TransactionStore.Core.DTOs;
 
 namespace TransactionStore.Application.Services;
 public class CurrencyExchangeClient(
-        ILogger<CurrencyExchangeClient> logger
-    ) : ICurrencyExchangeClient
+        ILogger<CurrencyExchangeClient> logger) 
+    : ICurrencyExchangeClient
 {
-    public async Task<decimal> GetExchangeRateAsync(CurrencyType fromCurrency, CurrencyType toCurrency)
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, decimal>> _rates = new();
+
+    public void UpdateRates(CurrencyType baseCurrency, Dictionary<string, decimal> rates)
+    {
+        logger.LogDebug($"Updating exchange rates for {baseCurrency} with {rates.Count} rates");
+        var baseCurrencyKey = baseCurrency.ToString();
+        var currencyRates = new ConcurrentDictionary<string, decimal>(rates);
+
+        _rates[baseCurrencyKey] = currencyRates;
+    }
+
+    public Task<decimal> GetExchangeRateAsync(CurrencyType fromCurrency, CurrencyType toCurrency)
     {
         logger.LogInformation($"Getting exchange rate from {fromCurrency} to {toCurrency}");
-        return 1.0m;
-        //var exchangeRate = await JsonSerializer.DeserializeAsync<CurrencyRatesResponse>(stream);
-        //return exchangeRate.Rates[toCurrency.ToString()];
+
+
+        if (_rates.TryGetValue(fromCurrency.ToString(), out var fromRates) && fromRates.TryGetValue(toCurrency.ToString(), out var rate))
+        {
+            return Task.FromResult(rate);
+        }
+
+        logger.LogCritical($"Exchange rate from {fromCurrency} to {toCurrency} not found");
+        throw new InvalidOperationException($"Exchange rate from {fromCurrency} to {toCurrency} not found");
     }
+
 }
