@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
+using Dapper;
 using Microsoft.Extensions.Logging;
+using System.Data;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Models;
@@ -53,13 +55,13 @@ public class TransactionService(
     public async Task<AccountBalanceModel> CountAccountBalance(Guid accountId)
     {
         logger.LogDebug("Entering CountAccountBalance with accountId: {AccountId}", accountId);
-        var balance = await GetAccountBalance(accountId);
+        var balanceData = await GetAccountBalanceWithLatestTransactionGuid(accountId);
         var balanceModel = new AccountBalanceModel()
         {
             AccountId = accountId,
-            Balance = balance
+            Balance = balanceData.balance
         };
-        logger.LogInformation("CountAccountBalance successful for accountId: {AccountId}, balance: {Balance}", accountId, balance);
+        logger.LogInformation("CountAccountBalance successful for accountId: {AccountId}, balance: {Balance}", accountId, balanceData.balance);
         return balanceModel;
     }
     public async Task<IEnumerable<TransactionModel>> GetTransactionsByAccountIdAsync(Guid accountId)
@@ -123,32 +125,44 @@ public class TransactionService(
         logger.LogInformation("GetTransactionsByAccountIdAsync successful for accountId: {AccountId}", accountId);
         return transactionModels;
     }
-
-    public async Task<Guid> CreateTransaction(TransactionModel transactionModel,TransactionType transactionType)
+    public async Task<Guid> CreateTransaction(TransactionModel transactionModel, TransactionType transactionType)
     {
         logger.LogDebug("Entering CreateTransaction with AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}", transactionModel.AccountId, transactionModel.Amount, transactionType);
 
-        if (transactionType == TransactionType.Withdrawal)
+        if (transactionType == TransactionType.Deposit)
         {
-            var balance = await GetAccountBalance(transactionModel.AccountId);
-            if (balance < transactionModel.Amount)
-            {
-                logger.LogError("Insufficient funds for AccountId: {AccountId}", transactionModel.AccountId);
-                throw new InvalidOperationException("Insufficient funds");
-            }
+            var depTransaction = transactionFactory.CreateTransaction(transactionModel, transactionType);
+            await transactionRepository.AddAsync(depTransaction);
+            logger.LogInformation("CreateTransaction successful for AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}", transactionModel.AccountId, transactionModel.Amount, transactionType);
+            return depTransaction.Id;
+        }
+
+        var (balance, lastTransaction) = await GetAccountBalanceWithLatestTransactionGuid(transactionModel.AccountId);
+        if (transactionType == TransactionType.Withdrawal && balance < transactionModel.Amount)
+        {
+            logger.LogError("Insufficient funds for AccountId: {AccountId}", transactionModel.AccountId);
+            throw new InvalidOperationException("Insufficient funds");
         }
 
         var transaction = transactionFactory.CreateTransaction(transactionModel, transactionType);
-        await transactionRepository.AddAsync(transaction);
+        var parameters = new DynamicParameters();
+        parameters.Add("accountid", transaction.AccountId, DbType.Guid);
+        parameters.Add("amount", transaction.Amount, DbType.Decimal);
+        parameters.Add("transactiontype", (int)transaction.TransactionType, DbType.Int32);
+        parameters.Add("lasttransactionid", lastTransaction, DbType.Guid);
+        parameters.Add("outputid", null, DbType.Guid);
+
+        var createdTransactionId = await transactionRepository.ExecuteStoredProcedureWithOutputAsync<Guid>("public.sp_createtransaction", parameters);
+
         logger.LogInformation("CreateTransaction successful for AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}", transactionModel.AccountId, transactionModel.Amount, transactionType);
-        return transaction.Id;
+        return createdTransactionId;
     }
 
     public async Task<IEnumerable<Guid>> CreateTransferTransaction(TransferTransactionModel transferModel)
     {
         logger.LogDebug("Entering CreateTransferTransaction with FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}", transferModel.FromAccountId, transferModel.ToAccountId, transferModel.Amount);
-        
-        var fromAccountBalance = await GetAccountBalance(transferModel.FromAccountId);
+
+        var (fromAccountBalance, lastTransaction) = await GetAccountBalanceWithLatestTransactionGuid(transferModel.FromAccountId);
         if (fromAccountBalance < transferModel.Amount)
         {
             logger.LogError("Insufficient funds for FromAccountId: {FromAccountId}", transferModel.FromAccountId);
@@ -162,21 +176,39 @@ public class TransactionService(
             throw new InvalidOperationException("Invalid exchange rate");
         }
         var (transFrom, transTo) = transactionFactory.CreateTransferTransaction(transferModel, exchangeRate);
-        await transactionRepository.TransactionalAddRangeAsync([transFrom, transTo]);
+        var parameters = new DynamicParameters();
+        parameters.Add("@FromId", transFrom.Id);
+        parameters.Add("@FromAccountId", transFrom.AccountId);
+        parameters.Add("@AmountFrom", transFrom.Amount);
+        parameters.Add("@TransactionTypeFrom", transFrom.TransactionType);
+        parameters.Add("@ToId", transTo.Id);
+        parameters.Add("@ToAccountId", transTo.AccountId);
+        parameters.Add("@AmountTo", transTo.Amount);
+        parameters.Add("@TransactionTypeTo", transTo.TransactionType);
+        parameters.Add("@LastTransactionId", lastTransaction);
+        parameters.Add("@OutputFromId", dbType: DbType.Guid, direction: ParameterDirection.Output);
+        parameters.Add("@OutputToId", dbType: DbType.Guid, direction: ParameterDirection.Output);
+
+        await transactionRepository.ExecuteStoredProcedureWithOutputAsync<Guid>("public.sp_CreateTransferTransaction", parameters);
+        var createdFromId = parameters.Get<Guid>("@OutputFromId");
+        var createdToId = parameters.Get<Guid>("@OutputToId");
+
         logger.LogInformation("CreateTransferTransaction successful for FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}", transferModel.FromAccountId, transferModel.ToAccountId, transferModel.Amount);
-        return [transFrom.Id, transTo.Id];
+        return new[] { createdFromId, createdToId };
     }
-    private async Task<decimal> GetAccountBalance(Guid accountId)
+
+    private async Task<(decimal balance, Guid? lastTransactionId)> GetAccountBalanceWithLatestTransactionGuid(Guid accountId)
     {
-        logger.LogDebug("Entering GetAccountBalance with accountId: {AccountId}", accountId);
+        logger.LogDebug("Entering GetAccountBalanceWithLatestTransactionGuid with accountId: {AccountId}", accountId);
         var transactions = await transactionRepository.FindAsync(t => t.AccountId == accountId);
         if (!transactions.Any())
         {
             logger.LogWarning("No transactions found for account {AccountId} when calculating balance", accountId);
         }
         var balance = transactions.Sum(t => t.Amount);
+        var lastTransaction = transactions.OrderByDescending(t => t.Date).FirstOrDefault();
         logger.LogDebug("Calculated balance: {Balance} for accountId: {AccountId}", balance, accountId);
-        logger.LogInformation("GetAccountBalance successful for accountId: {AccountId}, balance: {Balance}", accountId, balance);
-        return balance;
+        logger.LogInformation("GetAccountBalanceWithLatestTransactionGuid successful for accountId: {AccountId}, balance: {Balance}", accountId, balance);
+        return (balance, lastTransaction?.Id);
     }
 }

@@ -1,5 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Dapper;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Npgsql;
+using System.Data;
 using System.Linq.Expressions;
 using TransactionStore.Persistence.Data;
 using TransactionStore.Persistence.Interfaces;
@@ -7,11 +11,13 @@ using TransactionStore.Persistence.Interfaces;
 namespace TransactionStore.Persistence.Repositories;
 public class BaseRepository<TEntity>(
         ApplicationDbContext Context,
-        ILogger<BaseRepository<TEntity>> logger
+        ILogger<BaseRepository<TEntity>> logger,
+        IConfiguration configuration
     ) : IBaseRepository<TEntity> where
         TEntity : class
 {
     protected readonly DbSet<TEntity> DbSet = Context.Set<TEntity>();
+    private readonly string _connectionString = configuration.GetConnectionString("DefaultConnection");
     public virtual async Task<TEntity?> GetByIdAsync(object id)
     {
         logger.LogDebug("Entering GetByIdAsync with id: {Id}", id);
@@ -60,6 +66,17 @@ public class BaseRepository<TEntity>(
         await Context.SaveChangesAsync();
         logger.LogDebug("Entities added successfully: {Entities}", entities);
     }
+
+    public virtual async Task<T> ExecuteStoredProcedureWithOutputAsync<T>(string storedProcedure, DynamicParameters parameters)
+    {
+        using (var connection = new NpgsqlConnection(_connectionString))
+        {
+            await connection.OpenAsync();
+            await connection.ExecuteAsync("CALL public.sp_createtransaction(@accountid, @amount, @transactiontype, @lasttransactionid, @outputid)", parameters);
+            return parameters.Get<T>("outputid");
+        }
+    }
+
     public async Task TransactionalAddRangeAsync(IEnumerable<TEntity> entities)
     {
         logger.LogDebug("Entering TransactionalAddRangeAsync with entities: {Entities}", entities);
