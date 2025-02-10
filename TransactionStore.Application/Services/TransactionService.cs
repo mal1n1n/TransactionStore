@@ -150,10 +150,10 @@ public class TransactionService(
         parameters.Add("amount", transaction.Amount, DbType.Decimal);
         parameters.Add("transactiontype", (int)transaction.TransactionType, DbType.Int32);
         parameters.Add("lasttransactionid", lastTransaction, DbType.Guid);
-        parameters.Add("outputid", null, DbType.Guid);
+        parameters.Add("outputid", dbType: DbType.Guid, direction: ParameterDirection.Output);
 
-        var createdTransactionId = await transactionRepository.ExecuteStoredProcedureWithOutputAsync<Guid>("public.sp_createtransaction", parameters);
-
+        await transactionRepository.ExecuteStoredProcedureAsync("public.sp_createtransaction", parameters);
+        var createdTransactionId = parameters.Get<Guid>("outputid");
         logger.LogInformation("CreateTransaction successful for AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}", transactionModel.AccountId, transactionModel.Amount, transactionType);
         return createdTransactionId;
     }
@@ -175,27 +175,28 @@ public class TransactionService(
             logger.LogCritical("Invalid exchange rate for FromCurrency: {FromCurrency}, ToCurrency: {ToCurrency}", transferModel.FromCurrency, transferModel.ToCurrency);
             throw new InvalidOperationException("Invalid exchange rate");
         }
+
         var (transFrom, transTo) = transactionFactory.CreateTransferTransaction(transferModel, exchangeRate);
         var parameters = new DynamicParameters();
-        parameters.Add("@FromId", transFrom.Id);
-        parameters.Add("@FromAccountId", transFrom.AccountId);
-        parameters.Add("@AmountFrom", transFrom.Amount);
-        parameters.Add("@TransactionTypeFrom", transFrom.TransactionType);
-        parameters.Add("@ToId", transTo.Id);
-        parameters.Add("@ToAccountId", transTo.AccountId);
-        parameters.Add("@AmountTo", transTo.Amount);
-        parameters.Add("@TransactionTypeTo", transTo.TransactionType);
-        parameters.Add("@LastTransactionId", lastTransaction);
-        parameters.Add("@OutputFromId", dbType: DbType.Guid, direction: ParameterDirection.Output);
-        parameters.Add("@OutputToId", dbType: DbType.Guid, direction: ParameterDirection.Output);
+        parameters.Add("fromaccountid", transFrom.AccountId, DbType.Guid);
+        parameters.Add("amountfrom", transFrom.Amount, DbType.Decimal);
+        parameters.Add("transactiontypefrom", (int)transFrom.TransactionType, DbType.Int32);
+        parameters.Add("toaccountid", transTo.AccountId, DbType.Guid);
+        parameters.Add("amountto", transTo.Amount, DbType.Decimal);
+        parameters.Add("transactiontypeto", (int)transTo.TransactionType, DbType.Int32);
+        parameters.Add("lasttransactionid", lastTransaction, DbType.Guid);
+        parameters.Add("outputfromid", dbType: DbType.Guid, direction: ParameterDirection.Output);
+        parameters.Add("outputtoid", dbType: DbType.Guid, direction: ParameterDirection.Output);
 
-        await transactionRepository.ExecuteStoredProcedureWithOutputAsync<Guid>("public.sp_CreateTransferTransaction", parameters);
-        var createdFromId = parameters.Get<Guid>("@OutputFromId");
-        var createdToId = parameters.Get<Guid>("@OutputToId");
+        await transactionRepository.ExecuteStoredProcedureAsync("public.sp_createtransfertransaction", parameters);
+        var createdFromId = parameters.Get<Guid>("outputfromid");
+        var createdToId = parameters.Get<Guid>("outputtoid");
 
         logger.LogInformation("CreateTransferTransaction successful for FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}", transferModel.FromAccountId, transferModel.ToAccountId, transferModel.Amount);
-        return new[] { createdFromId, createdToId };
+        return [createdFromId, createdToId];
     }
+
+
 
     private async Task<(decimal balance, Guid? lastTransactionId)> GetAccountBalanceWithLatestTransactionGuid(Guid accountId)
     {

@@ -67,13 +67,12 @@ public class BaseRepository<TEntity>(
         logger.LogDebug("Entities added successfully: {Entities}", entities);
     }
 
-    public virtual async Task<T> ExecuteStoredProcedureWithOutputAsync<T>(string storedProcedure, DynamicParameters parameters)
+    public virtual async Task ExecuteStoredProcedureAsync(string storedProcedure, DynamicParameters parameters)
     {
         using (var connection = new NpgsqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            await connection.ExecuteAsync("CALL public.sp_createtransaction(@accountid, @amount, @transactiontype, @lasttransactionid, @outputid)", parameters);
-            return parameters.Get<T>("outputid");
+            await connection.ExecuteAsync(storedProcedure, parameters, commandType: CommandType.StoredProcedure);
         }
     }
 
@@ -111,4 +110,5 @@ public class BaseRepository<TEntity>(
         await Context.SaveChangesAsync();
         logger.LogDebug("Entity removed successfully: {Entity}", entity);
     }
+
 }
