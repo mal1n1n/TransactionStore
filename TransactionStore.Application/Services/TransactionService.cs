@@ -61,7 +61,7 @@ public class TransactionService(
             AccountId = accountId,
             Balance = balanceData.balance
         };
-        logger.LogInformation("CountAccountBalance successful for accountId: {AccountId}, balance: {Balance}", accountId, balanceData.balance);
+        logger.LogInformation("CountAccountBalance successful for accountId: {AccountId}, balance: {Balance}, latest transaction {lastTransactionId}", accountId, balanceData.balance, balanceData.lastTransactionId);
         return balanceModel;
     }
     public async Task<IEnumerable<TransactionModel>> GetTransactionsByAccountIdAsync(Guid accountId)
