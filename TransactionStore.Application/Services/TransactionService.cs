@@ -152,7 +152,7 @@ public class TransactionService(
         parameters.Add("lasttransactionid", lastTransaction, DbType.Guid);
         parameters.Add("outputid", dbType: DbType.Guid, direction: ParameterDirection.Output);
 
-        await transactionRepository.ExecuteStoredProcedureAsync("public.sp_createtransaction", parameters);
+        await transactionRepository.ExecuteStoredProcedureWithTransactionAsync("public.sp_createtransaction", parameters);
         var createdTransactionId = parameters.Get<Guid>("outputid");
         logger.LogInformation("CreateTransaction successful for AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}", transactionModel.AccountId, transactionModel.Amount, transactionType);
         return createdTransactionId;
@@ -188,7 +188,7 @@ public class TransactionService(
         parameters.Add("outputfromid", dbType: DbType.Guid, direction: ParameterDirection.Output);
         parameters.Add("outputtoid", dbType: DbType.Guid, direction: ParameterDirection.Output);
 
-        await transactionRepository.ExecuteStoredProcedureAsync("public.sp_createtransfertransaction", parameters);
+        await transactionRepository.ExecuteStoredProcedureWithTransactionAsync("public.sp_createtransfertransaction", parameters);
         var createdFromId = parameters.Get<Guid>("outputfromid");
         var createdToId = parameters.Get<Guid>("outputtoid");
 

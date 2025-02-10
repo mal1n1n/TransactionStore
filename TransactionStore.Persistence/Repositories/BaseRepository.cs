@@ -67,12 +67,26 @@ public class BaseRepository<TEntity>(
         logger.LogDebug("Entities added successfully: {Entities}", entities);
     }
 
-    public virtual async Task ExecuteStoredProcedureAsync(string storedProcedure, DynamicParameters parameters)
+    public virtual async Task ExecuteStoredProcedureWithTransactionAsync(string storedProcedure, DynamicParameters parameters)
     {
         using (var connection = new NpgsqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            await connection.ExecuteAsync(storedProcedure, parameters, commandType: CommandType.StoredProcedure);
+            using (var transaction = await connection.BeginTransactionAsync())
+            {
+                try
+                {
+                    await connection.ExecuteAsync(storedProcedure, parameters, transaction: transaction, commandType: CommandType.StoredProcedure);
+                    await transaction.CommitAsync();
+                    logger.LogDebug("Stored procedure executed successfully: {StoredProcedure}", storedProcedure);
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    logger.LogError(ex, "Error occurred while executing stored procedure: {StoredProcedure}", storedProcedure);
+                    throw;
+                }
+            }
         }
     }
 
