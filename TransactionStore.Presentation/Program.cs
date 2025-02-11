@@ -10,9 +10,6 @@ builder.Host.UseSerilog((context, configuration) =>
     configuration
         .ReadFrom.Configuration(context.Configuration);
 });
-// Логирование строки подключения
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-Log.Information("Connection string: {ConnectionString}", connectionString);
 
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
