@@ -325,7 +325,7 @@ namespace TransactionStore.Tests
                 .WithMessage("Insufficient funds");
 
             _transactionRepository.Verify(repo => repo.FindAsync(It.IsAny<Expression<Func<Transaction, bool>>>()), Times.Once);
-            _transactionRepository.Verify(repo => repo.ExecuteStoredProcedureWithTransactionAsync(It.IsAny<string>(), It.IsAny<DynamicParameters>()), Times.Never);
+            _transactionRepository.Verify(repo => repo.TransactionalExecuteStoredProcedureAsync(It.IsAny<string>(), It.IsAny<DynamicParameters>()), Times.Never);
         }
 
         [Fact]
@@ -377,7 +377,7 @@ namespace TransactionStore.Tests
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = transactionModel.AccountId }))))
                 .ReturnsAsync(new List<Transaction> { new() { AccountId = transactionModel.AccountId, Amount = 200 } });
-            _transactionRepository.Setup(repo => repo.ExecuteStoredProcedureWithTransactionAsync(
+            _transactionRepository.Setup(repo => repo.TransactionalExecuteStoredProcedureAsync(
                 It.Is<string>(s => s == "public.sp_createtransaction"),
                 It.IsAny<DynamicParameters>()))
                 .Callback<string, DynamicParameters>((storedProcedure, parameters) =>
@@ -394,7 +394,7 @@ namespace TransactionStore.Tests
             _transactionFactory.Verify(factory => factory.CreateTransaction(transactionModel, TransactionType.Withdrawal), Times.Once);
             _transactionRepository.Verify(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = transactionModel.AccountId }))), Times.Once);
-            _transactionRepository.Verify(repo => repo.ExecuteStoredProcedureWithTransactionAsync(
+            _transactionRepository.Verify(repo => repo.TransactionalExecuteStoredProcedureAsync(
                 It.Is<string>(s => s == "public.sp_createtransaction"),
                 It.IsAny<DynamicParameters>()), Times.Once);
         }
@@ -463,7 +463,7 @@ namespace TransactionStore.Tests
                 .ReturnsAsync(exchangeRate);
             _transactionFactory.Setup(factory => factory.CreateTransferTransaction(transferModel, exchangeRate))
                 .Returns((fromTransaction, toTransaction));
-            _transactionRepository.Setup(repo => repo.ExecuteStoredProcedureWithTransactionAsync(
+            _transactionRepository.Setup(repo => repo.TransactionalExecuteStoredProcedureAsync(
                 It.Is<string>(s => s == "public.sp_createtransfertransaction"),
                 It.IsAny<DynamicParameters>()))
                 .Callback<string, DynamicParameters>((storedProcedure, parameters) =>
@@ -482,7 +482,7 @@ namespace TransactionStore.Tests
             _transactionFactory.Verify(factory => factory.CreateTransferTransaction(transferModel, exchangeRate), Times.Once);
             _transactionRepository.Verify(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = transferModel.FromAccountId }))), Times.Once);
-            _transactionRepository.Verify(repo => repo.ExecuteStoredProcedureWithTransactionAsync(
+            _transactionRepository.Verify(repo => repo.TransactionalExecuteStoredProcedureAsync(
                 It.Is<string>(s => s == "public.sp_createtransfertransaction"),
                 It.IsAny<DynamicParameters>()), Times.Once);
         }

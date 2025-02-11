@@ -13,5 +13,5 @@ public interface IBaseRepository<TEntity> where TEntity : class
     Task TransactionalAddRangeAsync(IEnumerable<TEntity> entities);
     Task UpdateAsync(TEntity entity);
     Task RemoveAsync(TEntity entity);
-    Task ExecuteStoredProcedureWithTransactionAsync(string storedProcedure, DynamicParameters parameters);
+    Task TransactionalExecuteStoredProcedureAsync(string storedProcedure, DynamicParameters parameters);
 }

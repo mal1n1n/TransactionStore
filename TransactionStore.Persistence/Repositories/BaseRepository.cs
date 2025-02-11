@@ -67,7 +67,7 @@ public class BaseRepository<TEntity>(
         logger.LogDebug("Entities added successfully: {Entities}", entities);
     }
 
-    public virtual async Task ExecuteStoredProcedureWithTransactionAsync(string storedProcedure, DynamicParameters parameters)
+    public virtual async Task TransactionalExecuteStoredProcedureAsync(string storedProcedure, DynamicParameters parameters)
     {
         using (var connection = new NpgsqlConnection(_connectionString))
         {
