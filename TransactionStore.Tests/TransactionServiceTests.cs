@@ -302,7 +302,7 @@ namespace TransactionStore.Tests
         }
 
         [Fact]
-        public async Task CreateTransaction_InsufficientFunds_ThrowsInvalidOperationException()
+        public async Task CreateTransaction_InsufficientFunds_ThrowsInsufficientFundsException()
         {
             // Arrange
             var transactionModel = new TransactionModel
@@ -315,13 +315,13 @@ namespace TransactionStore.Tests
 
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = transactionModel.AccountId }))))
-                .ReturnsAsync(new List<Transaction> { new() { AccountId = transactionModel.AccountId, Amount = 50 } });
+                .ReturnsAsync([new() { AccountId = transactionModel.AccountId, Amount = 50 }]);
 
             // Act
             Func<Task> act = async () => await _sut.CreateTransaction(transactionModel, TransactionType.Withdrawal);
 
             // Assert
-            await act.Should().ThrowAsync<InvalidOperationException>()
+            await act.Should().ThrowAsync<InsufficientFundsException>()
                 .WithMessage("Insufficient funds");
 
             _transactionRepository.Verify(repo => repo.FindAsync(It.IsAny<Expression<Func<Transaction, bool>>>()), Times.Once);
@@ -376,15 +376,9 @@ namespace TransactionStore.Tests
                 .Returns(transaction);
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = transactionModel.AccountId }))))
-                .ReturnsAsync(new List<Transaction> { new() { AccountId = transactionModel.AccountId, Amount = 200 } });
-            _transactionRepository.Setup(repo => repo.TransactionalExecuteStoredProcedureAsync(
-                It.Is<string>(s => s == "public.sp_createtransaction"),
-                It.IsAny<DynamicParameters>()))
-                .Callback<string, DynamicParameters>((storedProcedure, parameters) =>
-                {
-                    parameters.Add("outputid", transactionId, DbType.Guid, ParameterDirection.Output);
-                })
-                .Returns(Task.CompletedTask);
+                .ReturnsAsync([new() { AccountId = transactionModel.AccountId, Amount = 200 }]);
+            _transactionRepository.Setup(repo => repo.CreateTransactionAsync(transaction, It.IsAny<Guid?>()))
+                .ReturnsAsync(transactionId);
 
             // Act
             var result = await _sut.CreateTransaction(transactionModel, TransactionType.Withdrawal);
@@ -394,12 +388,11 @@ namespace TransactionStore.Tests
             _transactionFactory.Verify(factory => factory.CreateTransaction(transactionModel, TransactionType.Withdrawal), Times.Once);
             _transactionRepository.Verify(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = transactionModel.AccountId }))), Times.Once);
-            _transactionRepository.Verify(repo => repo.TransactionalExecuteStoredProcedureAsync(
-                It.Is<string>(s => s == "public.sp_createtransaction"),
-                It.IsAny<DynamicParameters>()), Times.Once);
+            _transactionRepository.Verify(repo => repo.CreateTransactionAsync(transaction, It.IsAny<Guid?>()), Times.Once);
         }
+
         [Fact]
-        public async Task CreateTransferTransaction_InsufficientFunds_ThrowsInvalidOperationException()
+        public async Task CreateTransferTransaction_InsufficientFunds_ThrowsInsufficientFundsException()
         {
             // Arrange
             var transferModel = new TransferTransactionModel
@@ -419,7 +412,7 @@ namespace TransactionStore.Tests
             Func<Task> act = async () => await _sut.CreateTransferTransaction(transferModel);
 
             // Assert
-            await act.Should().ThrowAsync<InvalidOperationException>()
+            await act.Should().ThrowAsync<InsufficientFundsException>()
                 .WithMessage("Insufficient funds");
         }
 
@@ -463,15 +456,8 @@ namespace TransactionStore.Tests
                 .ReturnsAsync(exchangeRate);
             _transactionFactory.Setup(factory => factory.CreateTransferTransaction(transferModel, exchangeRate))
                 .Returns((fromTransaction, toTransaction));
-            _transactionRepository.Setup(repo => repo.TransactionalExecuteStoredProcedureAsync(
-                It.Is<string>(s => s == "public.sp_createtransfertransaction"),
-                It.IsAny<DynamicParameters>()))
-                .Callback<string, DynamicParameters>((storedProcedure, parameters) =>
-                {
-                    parameters.Add("outputfromid", fromTransactionId, DbType.Guid, ParameterDirection.Output);
-                    parameters.Add("outputtoid", toTransactionId, DbType.Guid, ParameterDirection.Output);
-                })
-                .Returns(Task.CompletedTask);
+            _transactionRepository.Setup(repo => repo.CreateTransferTransactionAsync(fromTransaction, toTransaction, It.IsAny<Guid?>()))
+                .ReturnsAsync((fromTransactionId, toTransactionId));
 
             // Act
             var result = await _sut.CreateTransferTransaction(transferModel);
@@ -482,13 +468,12 @@ namespace TransactionStore.Tests
             _transactionFactory.Verify(factory => factory.CreateTransferTransaction(transferModel, exchangeRate), Times.Once);
             _transactionRepository.Verify(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = transferModel.FromAccountId }))), Times.Once);
-            _transactionRepository.Verify(repo => repo.TransactionalExecuteStoredProcedureAsync(
-                It.Is<string>(s => s == "public.sp_createtransfertransaction"),
-                It.IsAny<DynamicParameters>()), Times.Once);
+            _transactionRepository.Verify(repo => repo.CreateTransferTransactionAsync(fromTransaction, toTransaction, It.IsAny<Guid?>()), Times.Once);
         }
 
+
         [Fact]
-        public async Task CreateTransferTransaction_InvalidExchangeRate_ThrowsInvalidOperationException()
+        public async Task CreateTransferTransaction_InvalidExchangeRate_ThrowsInvalidExchangeRateException()
         {
             // Arrange
             var transferModel = new TransferTransactionModel
@@ -512,7 +497,7 @@ namespace TransactionStore.Tests
             Func<Task> act = async () => await _sut.CreateTransferTransaction(transferModel);
 
             // Assert
-            await act.Should().ThrowAsync<InvalidOperationException>()
+            await act.Should().ThrowAsync<InvalidExchangeRateException>()
                 .WithMessage("Invalid exchange rate");
         }
     }

@@ -141,19 +141,12 @@ public class TransactionService(
         if (transactionType == TransactionType.Withdrawal && balance < transactionModel.Amount)
         {
             logger.LogError("Insufficient funds for AccountId: {AccountId}", transactionModel.AccountId);
-            throw new InvalidOperationException("Insufficient funds");
+            throw new InsufficientFundsException("Insufficient funds");
         }
 
         var transaction = transactionFactory.CreateTransaction(transactionModel, transactionType);
-        var parameters = new DynamicParameters();
-        parameters.Add("accountid", transaction.AccountId, DbType.Guid);
-        parameters.Add("amount", transaction.Amount, DbType.Decimal);
-        parameters.Add("transactiontype", (int)transaction.TransactionType, DbType.Int32);
-        parameters.Add("lasttransactionid", lastTransaction, DbType.Guid);
-        parameters.Add("outputid", dbType: DbType.Guid, direction: ParameterDirection.Output);
+        var createdTransactionId = await transactionRepository.CreateTransactionAsync(transaction, lastTransaction);
 
-        await transactionRepository.TransactionalExecuteStoredProcedureAsync("public.sp_createtransaction", parameters);
-        var createdTransactionId = parameters.Get<Guid>("outputid");
         logger.LogInformation("CreateTransaction successful for AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}", transactionModel.AccountId, transactionModel.Amount, transactionType);
         return createdTransactionId;
     }
@@ -166,31 +159,19 @@ public class TransactionService(
         if (fromAccountBalance < transferModel.Amount)
         {
             logger.LogError("Insufficient funds for FromAccountId: {FromAccountId}", transferModel.FromAccountId);
-            throw new InvalidOperationException("Insufficient funds");
+            throw new InsufficientFundsException("Insufficient funds");
         }
 
         var exchangeRate = await currencyExchangeClient.GetExchangeRateAsync(transferModel.FromCurrency, transferModel.ToCurrency);
         if (exchangeRate <= 0)
         {
             logger.LogCritical("Invalid exchange rate for FromCurrency: {FromCurrency}, ToCurrency: {ToCurrency}", transferModel.FromCurrency, transferModel.ToCurrency);
-            throw new InvalidOperationException("Invalid exchange rate");
+            throw new InvalidExchangeRateException("Invalid exchange rate");
         }
 
         var (transFrom, transTo) = transactionFactory.CreateTransferTransaction(transferModel, exchangeRate);
-        var parameters = new DynamicParameters();
-        parameters.Add("fromaccountid", transFrom.AccountId, DbType.Guid);
-        parameters.Add("amountfrom", transFrom.Amount, DbType.Decimal);
-        parameters.Add("transactiontypefrom", (int)transFrom.TransactionType, DbType.Int32);
-        parameters.Add("toaccountid", transTo.AccountId, DbType.Guid);
-        parameters.Add("amountto", transTo.Amount, DbType.Decimal);
-        parameters.Add("transactiontypeto", (int)transTo.TransactionType, DbType.Int32);
-        parameters.Add("lasttransactionid", lastTransaction, DbType.Guid);
-        parameters.Add("outputfromid", dbType: DbType.Guid, direction: ParameterDirection.Output);
-        parameters.Add("outputtoid", dbType: DbType.Guid, direction: ParameterDirection.Output);
 
-        await transactionRepository.TransactionalExecuteStoredProcedureAsync("public.sp_createtransfertransaction", parameters);
-        var createdFromId = parameters.Get<Guid>("outputfromid");
-        var createdToId = parameters.Get<Guid>("outputtoid");
+        var (createdFromId, createdToId) = await transactionRepository.CreateTransferTransactionAsync(transFrom, transTo, lastTransaction);
 
         logger.LogInformation("CreateTransferTransaction successful for FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}", transferModel.FromAccountId, transferModel.ToAccountId, transferModel.Amount);
         return [createdFromId, createdToId];
