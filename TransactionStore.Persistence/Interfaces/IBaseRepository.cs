@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using Dapper;
+using System.Linq.Expressions;
 
 namespace TransactionStore.Persistence.Interfaces;
 
@@ -12,4 +13,5 @@ public interface IBaseRepository<TEntity> where TEntity : class
     Task TransactionalAddRangeAsync(IEnumerable<TEntity> entities);
     Task UpdateAsync(TEntity entity);
     Task RemoveAsync(TEntity entity);
+    Task TransactionalExecuteStoredProcedureAsync(string storedProcedure, DynamicParameters parameters);
 }
