@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Core;
 
@@ -50,7 +51,7 @@ public class CurrencyExchangeClient(
         }
 
         logger.LogCritical($"Exchange rate from {fromCurrency} to {toCurrency} not found");
-        throw new InvalidOperationException($"Exchange rate from {fromCurrency} to {toCurrency} not found");
+        throw new ExchangeRateNotFoundException($"Exchange rate from {fromCurrency} to {toCurrency} not found");
     }
 
 }

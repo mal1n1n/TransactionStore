@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Moq;
+using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Services;
 using TransactionStore.Core;
@@ -9,13 +10,13 @@ namespace TransactionStore.Tests;
 
 public class CurrencyExchangeServiceTests
 {
-    private readonly CurrencyExchangeClient _currencyExchangeClient;
+    private readonly CurrencyExchangeClient _sut;
     private readonly Mock<ILogger<CurrencyExchangeClient>> _loggerMock;
 
     public CurrencyExchangeServiceTests()
     {
         _loggerMock = new Mock<ILogger<CurrencyExchangeClient>>();
-        _currencyExchangeClient = new CurrencyExchangeClient(_loggerMock.Object);
+        _sut = new CurrencyExchangeClient(_loggerMock.Object);
     }
 
     [Fact]
@@ -30,15 +31,15 @@ public class CurrencyExchangeServiceTests
         };
 
         // Act
-        _currencyExchangeClient.UpdateRates(baseCurrency, rates);
+        _sut.UpdateRates(baseCurrency, rates);
 
         // Assert
-        Assert.Equal(0.85m, _currencyExchangeClient.GetExchangeRate(CurrencyType.USD, CurrencyType.EUR));
-        Assert.Equal(1 / 0.85m, _currencyExchangeClient.GetExchangeRate(CurrencyType.EUR, CurrencyType.USD));
-        Assert.Equal(110m, _currencyExchangeClient.GetExchangeRate(CurrencyType.USD, CurrencyType.JPY));
-        Assert.Equal(1 / 110m, _currencyExchangeClient.GetExchangeRate(CurrencyType.JPY, CurrencyType.USD));
-        Assert.Equal(110m / 0.85m, _currencyExchangeClient.GetExchangeRate(CurrencyType.EUR, CurrencyType.JPY));
-        Assert.Equal(0.85m / 110m, _currencyExchangeClient.GetExchangeRate(CurrencyType.JPY, CurrencyType.EUR));
+        Assert.Equal(0.85m, _sut.GetExchangeRate(CurrencyType.USD, CurrencyType.EUR));
+        Assert.Equal(1 / 0.85m, _sut.GetExchangeRate(CurrencyType.EUR, CurrencyType.USD));
+        Assert.Equal(110m, _sut.GetExchangeRate(CurrencyType.USD, CurrencyType.JPY));
+        Assert.Equal(1 / 110m, _sut.GetExchangeRate(CurrencyType.JPY, CurrencyType.USD));
+        Assert.Equal(110m / 0.85m, _sut.GetExchangeRate(CurrencyType.EUR, CurrencyType.JPY));
+        Assert.Equal(0.85m / 110m, _sut.GetExchangeRate(CurrencyType.JPY, CurrencyType.EUR));
     }
 
     [Fact]
@@ -51,10 +52,10 @@ public class CurrencyExchangeServiceTests
             { "EUR", 0.85m },
             { "JPY", 110m }
         };
-        _currencyExchangeClient.UpdateRates(baseCurrency, rates);
+        _sut.UpdateRates(baseCurrency, rates);
 
         // Act
-        var rate = _currencyExchangeClient.GetExchangeRate(CurrencyType.USD, CurrencyType.EUR);
+        var rate = _sut.GetExchangeRate(CurrencyType.USD, CurrencyType.EUR);
 
         // Assert
         Assert.Equal(0.85m, rate);
@@ -64,9 +65,20 @@ public class CurrencyExchangeServiceTests
     public void GetExchangeRate_SameCurrency_ShouldReturnOne()
     {
         // Act
-        var rate = _currencyExchangeClient.GetExchangeRate(CurrencyType.USD, CurrencyType.USD);
+        var rate = _sut.GetExchangeRate(CurrencyType.USD, CurrencyType.USD);
 
         // Assert
         Assert.Equal(1m, rate);
+    }
+
+    [Fact]
+    public void GetExchangeRate_InvalidCurrency_ShouldThrowExchangeRateNotFoundException()
+    {
+        // Arrange
+        var fromCurrency = CurrencyType.USD;
+        var toCurrency = CurrencyType.ARS;
+
+        // Act & Assert
+        Assert.Throws<ExchangeRateNotFoundException>(() => _sut.GetExchangeRate(fromCurrency, toCurrency));
     }
 }
