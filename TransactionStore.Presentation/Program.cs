@@ -21,8 +21,13 @@ builder.Services.ConfigurePresentationServices();
 builder.Services.ConfigureApplication(builder.Configuration);  
 builder.Services.ConfigureFluentValidators();
 builder.Services.ConfigureMappers();
+
+var allowedIps = builder.Configuration.GetSection("AllowedIPs").Get<string[]>();
+builder.Services.AddSingleton(allowedIps);
+
 var app = builder.Build();
-//app.UseIPFilter("127.0.0.1");
+
+app.UseIPFilter();
 app.ConfigureCustomExceptionMiddleware();
 app.ConfigurePresentation();
 app.Run();
