@@ -135,6 +135,7 @@ public class TransactionService(
         {
             var depTransaction = transactionFactory.CreateTransaction(transactionModel, transactionType);
             await transactionRepository.AddAsync(depTransaction);
+            await publishEndpoint.Publish(mapper.Map<TransactionCreatedMessage>(depTransaction));
             logger.LogInformation("CreateTransaction successful for AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}", transactionModel.AccountId, transactionModel.Amount, transactionType);
             return depTransaction.Id;
         }

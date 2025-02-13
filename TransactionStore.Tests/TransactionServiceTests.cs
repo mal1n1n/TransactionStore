@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Dapper;
 using FluentAssertions;
 using MassTransit;
 using Microsoft.Extensions.Logging;
@@ -331,7 +330,6 @@ namespace TransactionStore.Tests
                 .WithMessage("Insufficient funds");
 
             _transactionRepository.Verify(repo => repo.FindAsync(It.IsAny<Expression<Func<Transaction, bool>>>()), Times.Once);
-            _transactionRepository.Verify(repo => repo.TransactionalExecuteStoredProcedureAsync(It.IsAny<string>(), It.IsAny<DynamicParameters>()), Times.Never);
         }
 
         [Fact]
@@ -339,10 +337,11 @@ namespace TransactionStore.Tests
         {
             // Arrange
             var transactionId = Guid.NewGuid();
+            var accountId = Guid.NewGuid();
             var transactionModel = new TransactionModel
             {
                 Id = transactionId,
-                AccountId = Guid.NewGuid(),
+                AccountId = accountId,
                 Amount = 100,
                 Date = DateTime.UtcNow,
                 TransactionType = TransactionType.Deposit
@@ -360,15 +359,15 @@ namespace TransactionStore.Tests
 
             // Assert
             result.Should().Be(transactionId);
+            _transactionFactory.Verify(factory => factory.CreateTransaction(transactionModel, TransactionType.Deposit), Times.Once);
+            _transactionRepository.Verify(repo => repo.AddAsync(transaction), Times.Once);
             _publishEndpoint.Verify(pe => pe.Publish(It.Is<TransactionCreatedMessage>(msg =>
                 msg.Id == expectedMessage.Id &&
                 msg.AccountId == expectedMessage.AccountId &&
                 msg.Amount == expectedMessage.Amount &&
                 msg.Date == expectedMessage.Date &&
-                msg.TransactionType == expectedMessage.TransactionType),
+                msg.TransactionType == TransactionType.Deposit),
                 It.IsAny<CancellationToken>()), Times.Once);
-            _transactionFactory.Verify(factory => factory.CreateTransaction(transactionModel, TransactionType.Deposit), Times.Once);
-            _transactionRepository.Verify(repo => repo.AddAsync(transaction), Times.Once);
         }
 
         [Fact]
@@ -376,22 +375,24 @@ namespace TransactionStore.Tests
         {
             // Arrange
             var transactionId = Guid.NewGuid();
+            var accountId = Guid.NewGuid();
             var transactionModel = new TransactionModel
             {
                 Id = transactionId,
-                AccountId = Guid.NewGuid(),
+                AccountId = accountId,
                 Amount = 100,
                 Date = DateTime.UtcNow,
                 TransactionType = TransactionType.Withdrawal
             };
             var transaction = _mapper.Map<Transaction>(transactionModel);
+            var expectedMessage = _mapper.Map<TransactionCreatedMessage>(transaction);
 
             _transactionFactory.Setup(factory => factory.CreateTransaction(transactionModel, TransactionType.Withdrawal))
                 .Returns(transaction);
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
-                predicate.Compile().Invoke(new Transaction { AccountId = transactionModel.AccountId }))))
-                .ReturnsAsync([new() { AccountId = transactionModel.AccountId, Amount = 200 }]);
-            _transactionRepository.Setup(repo => repo.CreateTransactionAsync(transaction, It.IsAny<Guid?>()))
+                predicate.Compile().Invoke(new Transaction { AccountId = accountId }))))
+                .ReturnsAsync(new List<Transaction> { new() { AccountId = accountId, Amount = 200 } });
+            _transactionRepository.Setup(repo => repo.CreateTransactionAsync(transaction, new Guid()))
                 .ReturnsAsync(transactionId);
 
             // Act
@@ -401,9 +402,17 @@ namespace TransactionStore.Tests
             result.Should().Be(transactionId);
             _transactionFactory.Verify(factory => factory.CreateTransaction(transactionModel, TransactionType.Withdrawal), Times.Once);
             _transactionRepository.Verify(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
-                predicate.Compile().Invoke(new Transaction { AccountId = transactionModel.AccountId }))), Times.Once);
-            _transactionRepository.Verify(repo => repo.CreateTransactionAsync(transaction, It.IsAny<Guid?>()), Times.Once);
+                predicate.Compile().Invoke(new Transaction { AccountId = accountId }))), Times.Once);
+            _transactionRepository.Verify(repo => repo.CreateTransactionAsync(transaction, new Guid()), Times.Once);
+            _publishEndpoint.Verify(pe => pe.Publish(It.Is<TransactionCreatedMessage>(msg =>
+                msg.Id == expectedMessage.Id &&
+                msg.AccountId == expectedMessage.AccountId &&
+                msg.Amount == expectedMessage.Amount &&
+                msg.Date == expectedMessage.Date &&
+                msg.TransactionType == TransactionType.Withdrawal),
+                It.IsAny<CancellationToken>()), Times.Once);
         }
+
 
         [Fact]
         public async Task CreateTransferTransaction_InsufficientFunds_ThrowsInsufficientFundsException()
@@ -466,7 +475,7 @@ namespace TransactionStore.Tests
 
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = transferModel.FromAccountId }))))
-                .ReturnsAsync([new() { AccountId = transferModel.FromAccountId, Amount = 200 }]);
+                .ReturnsAsync(new List<Transaction> { new() { AccountId = transferModel.FromAccountId, Amount = 200 } });
 
             _currencyExchangeClient.Setup(client => client.GetExchangeRate(transferModel.FromCurrency, transferModel.ToCurrency))
                 .Returns(exchangeRate);
@@ -481,7 +490,7 @@ namespace TransactionStore.Tests
             // Assert
             result.Should().Contain(fromTransactionId);
             result.Should().Contain(toTransactionId);
-          
+
             _publishEndpoint.Verify(pe => pe.Publish(It.Is<TransactionCreatedMessage>(msg =>
                 msg.Id == fromTransactionMapped.Id &&
                 msg.AccountId == fromTransactionMapped.AccountId &&
@@ -497,9 +506,13 @@ namespace TransactionStore.Tests
                 msg.Date == toTransactionMapped.Date &&
                 msg.TransactionType == toTransactionMapped.TransactionType),
                 It.IsAny<CancellationToken>()), Times.Once);
-            _transactionFactory.Verify(factory => factory.CreateTransferTransaction(transferModel, exchangeRate), Times.Once);
-        }
 
+            _transactionRepository.Verify(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
+                predicate.Compile().Invoke(new Transaction { AccountId = transferModel.FromAccountId }))), Times.Once);
+            _currencyExchangeClient.Verify(client => client.GetExchangeRate(transferModel.FromCurrency, transferModel.ToCurrency), Times.Once);
+            _transactionFactory.Verify(factory => factory.CreateTransferTransaction(transferModel, exchangeRate), Times.Once);
+            _transactionRepository.Verify(repo => repo.CreateTransferTransactionAsync(fromTransaction, toTransaction, It.IsAny<Guid?>()), Times.Once);
+        }
 
         [Fact]
         public async Task CreateTransferTransaction_InvalidExchangeRate_ThrowsInvalidExchangeRateException()
