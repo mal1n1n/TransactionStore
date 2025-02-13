@@ -13,6 +13,6 @@ public class CurrencyExchangeRateConsumer(
     public async Task Consume(ConsumeContext<CurrencyRatesResponse> context)
     {
         logger.LogDebug($"Received exchange rate {context.Message.BaseCurrency.ToString()} from RabbitMQ: {context.Message.Rates}");
-        currencyExchangeClient.UpdateRates(context.Message.BaseCurrency,context.Message.Rates);
+        currencyExchangeClient.UpdateRates(context.Message.Rates);
     }
 }

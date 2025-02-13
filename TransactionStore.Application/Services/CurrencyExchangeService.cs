@@ -10,29 +10,16 @@ public class CurrencyExchangeClient(
 {
     private readonly Dictionary<string, decimal> _rates = new();
 
-    public void UpdateRates(CurrencyType baseCurrency, Dictionary<string, decimal> rates)
+    public void UpdateRates(Dictionary<string, decimal> rates)
     {
-        logger.LogDebug($"Updating exchange rates for {baseCurrency} with {rates.Count} rates");
+        logger.LogDebug($"Updating exchange rates with {rates.Count} rates");
         _rates.Clear();
 
         foreach (var rate in rates)
         {
-            _rates[$"{baseCurrency}{rate.Key}"] = rate.Value;
-            _rates[$"{rate.Key}{baseCurrency}"] = 1 / rate.Value;
-        }
-
-        foreach (var fromRate in rates)
-        {
-            foreach (var toRate in rates)
-            {
-                if (fromRate.Key != toRate.Key)
-                {
-                    _rates[$"{fromRate.Key}{toRate.Key}"] = toRate.Value / fromRate.Value;
-                }
-            }
+            _rates[rate.Key] = rate.Value;
         }
     }
-
 
     public decimal GetExchangeRate(CurrencyType fromCurrency, CurrencyType toCurrency)
     {

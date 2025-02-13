@@ -5,6 +5,6 @@ namespace TransactionStore.Application.Interfaces
     public interface ICurrencyExchangeClient
     {
         decimal GetExchangeRate(CurrencyType fromCurrency, CurrencyType toCurrency);
-        void UpdateRates(CurrencyType baseCurrency, Dictionary<string, decimal> rates);
+        void UpdateRates(Dictionary<string, decimal> rates);
     }
 }

@@ -23,36 +23,34 @@ public class CurrencyExchangeServiceTests
     public void UpdateRates_ShouldUpdateRatesCorrectly()
     {
         // Arrange
-        var baseCurrency = CurrencyType.USD;
         var rates = new Dictionary<string, decimal>
         {
-            { "EUR", 0.85m },
-            { "JPY", 110m }
+            { "USDEUR", 0.85m },
+            { "USDJPY", 110m },
+            { "EURUSD", 1.18m },
+            { "JPYEUR", 0.0077m }
         };
 
         // Act
-        _sut.UpdateRates(baseCurrency, rates);
+        _sut.UpdateRates(rates);
 
         // Assert
         Assert.Equal(0.85m, _sut.GetExchangeRate(CurrencyType.USD, CurrencyType.EUR));
-        Assert.Equal(1 / 0.85m, _sut.GetExchangeRate(CurrencyType.EUR, CurrencyType.USD));
+        Assert.Equal(1.18m, _sut.GetExchangeRate(CurrencyType.EUR, CurrencyType.USD));
         Assert.Equal(110m, _sut.GetExchangeRate(CurrencyType.USD, CurrencyType.JPY));
-        Assert.Equal(1 / 110m, _sut.GetExchangeRate(CurrencyType.JPY, CurrencyType.USD));
-        Assert.Equal(110m / 0.85m, _sut.GetExchangeRate(CurrencyType.EUR, CurrencyType.JPY));
-        Assert.Equal(0.85m / 110m, _sut.GetExchangeRate(CurrencyType.JPY, CurrencyType.EUR));
+        Assert.Equal(0.0077m, _sut.GetExchangeRate(CurrencyType.JPY, CurrencyType.EUR));
     }
 
     [Fact]
     public void GetExchangeRate_ShouldReturnCorrectRate()
     {
         // Arrange
-        var baseCurrency = CurrencyType.USD;
         var rates = new Dictionary<string, decimal>
         {
-            { "EUR", 0.85m },
-            { "JPY", 110m }
+            { "USDEUR", 0.85m },
+            { "USDJPY", 110m }
         };
-        _sut.UpdateRates(baseCurrency, rates);
+        _sut.UpdateRates(rates);
 
         // Act
         var rate = _sut.GetExchangeRate(CurrencyType.USD, CurrencyType.EUR);
@@ -75,6 +73,13 @@ public class CurrencyExchangeServiceTests
     public void GetExchangeRate_InvalidCurrency_ShouldThrowExchangeRateNotFoundException()
     {
         // Arrange
+        var rates = new Dictionary<string, decimal>
+        {
+            { "USDEUR", 0.85m },
+            { "USDJPY", 110m }
+        };
+        _sut.UpdateRates(rates);
+
         var fromCurrency = CurrencyType.USD;
         var toCurrency = CurrencyType.ARS;
 
