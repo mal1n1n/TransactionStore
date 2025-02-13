@@ -133,9 +133,11 @@ public class TransactionService(
 
         if (transactionType == TransactionType.Deposit)
         {
-            var depTransaction = transactionFactory.CreateTransaction(transactionModel, transactionType);
+            var depTransaction = transactionFactory.CreateTransaction(transactionModel, transactionType, out var depCommission);
             await transactionRepository.AddAsync(depTransaction);
-            await publishEndpoint.Publish(mapper.Map<TransactionCreatedMessage>(depTransaction));
+            var transactionDepositMessage = mapper.Map<TransactionCreatedMessage>(depTransaction);
+            transactionDepositMessage.Commission = depCommission;
+            await publishEndpoint.Publish(transactionDepositMessage);
             logger.LogInformation("CreateTransaction successful for AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}", transactionModel.AccountId, transactionModel.Amount, transactionType);
             return depTransaction.Id;
         }
@@ -147,12 +149,14 @@ public class TransactionService(
             throw new InsufficientFundsException("Insufficient funds");
         }
 
-        var transaction = transactionFactory.CreateTransaction(transactionModel, transactionType);
-        
-        var createdTransactionId = await transactionRepository.CreateTransactionAsync(transaction, lastTransaction);
-        await publishEndpoint.Publish(mapper.Map<TransactionCreatedMessage>(transaction));
+        var transaction = transactionFactory.CreateTransaction(transactionModel, transactionType, out var commission);
 
-        logger.LogInformation("CreateTransaction successful for AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}", transactionModel.AccountId, transactionModel.Amount, transactionType);
+        var createdTransactionId = await transactionRepository.CreateTransactionAsync(transaction, lastTransaction);
+        var transactionMessage = mapper.Map<TransactionCreatedMessage>(transaction);
+        transactionMessage.Commission = commission;
+        await publishEndpoint.Publish(transactionMessage);
+
+        logger.LogInformation("CreateTransaction successful for AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}, Commission: {Commission}", transactionModel.AccountId, transactionModel.Amount, transactionType, commission);
         return createdTransactionId;
     }
 
@@ -174,14 +178,19 @@ public class TransactionService(
             throw new InvalidExchangeRateException("Invalid exchange rate");
         }
 
-        var (transFrom, transTo) = transactionFactory.CreateTransferTransaction(transferModel, exchangeRate);
-        
+        var (transFrom, transTo, commission) = transactionFactory.CreateTransferTransaction(transferModel, exchangeRate);
+
         var (createdFromId, createdToId) = await transactionRepository.CreateTransferTransactionAsync(transFrom, transTo, lastTransaction);
 
-        await publishEndpoint.Publish(mapper.Map<TransactionCreatedMessage>(transFrom));
-        await publishEndpoint.Publish(mapper.Map<TransactionCreatedMessage>(transTo));
-        
-        logger.LogInformation("CreateTransferTransaction successful for FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}", transferModel.FromAccountId, transferModel.ToAccountId, transferModel.Amount);
+        var transFromMessage = mapper.Map<TransactionCreatedMessage>(transFrom);
+        transFromMessage.Commission = commission;
+        await publishEndpoint.Publish(transFromMessage);
+
+        var transToMessage = mapper.Map<TransactionCreatedMessage>(transTo);
+        transToMessage.Commission = 0; // Commision for the receiver is 0
+        await publishEndpoint.Publish(transToMessage);
+
+        logger.LogInformation("CreateTransferTransaction successful for FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}, Commission: {Commission}", transferModel.FromAccountId, transferModel.ToAccountId, transferModel.Amount, commission);
         return [createdFromId, createdToId];
     }
 

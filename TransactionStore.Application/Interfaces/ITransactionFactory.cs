@@ -5,6 +5,6 @@ using TransactionStore.Persistence.Entities;
 namespace TransactionStore.Application.Interfaces;
 public interface ITransactionFactory
 {
-    Transaction CreateTransaction(TransactionModel transactionModel, TransactionType transactionType);
-    (Transaction transFrom, Transaction transTo) CreateTransferTransaction(TransferTransactionModel transferModel, decimal exchangeRate);
+    Transaction CreateTransaction(TransactionModel transactionModel, TransactionType transactionType, out decimal commission);
+    (Transaction transFrom, Transaction transTo, decimal commission) CreateTransferTransaction(TransferTransactionModel transferModel, decimal exchangeRate);
 }

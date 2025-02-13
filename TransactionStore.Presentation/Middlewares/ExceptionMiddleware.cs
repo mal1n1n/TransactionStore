@@ -24,10 +24,18 @@ public class ExceptionMiddleware(RequestDelegate next)
         {
             await HandleInsufficientFundsException(httpContext, ex);
         }
+        catch (CommissionSettingException ex)
+        {
+            await HandleCommisionSettingException(httpContext, ex);
+        }
         catch (Exception ex)
         {
             await HandleExceptionAsync(httpContext, ex);
         }
+    }
+    private async Task HandleCommisionSettingException(HttpContext context, Exception exception)
+    {
+        await HandleExceptionAsync(context, exception, HttpStatusCode.InternalServerError, "Commission setting is not configured or went broken.");
     }
     private async Task HandleTransactionNotFoundException(HttpContext context, Exception exception)
     {
