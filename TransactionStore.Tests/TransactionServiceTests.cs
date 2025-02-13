@@ -391,7 +391,7 @@ namespace TransactionStore.Tests
                 .Returns(transaction);
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = accountId }))))
-                .ReturnsAsync(new List<Transaction> { new() { AccountId = accountId, Amount = 200 } });
+                .ReturnsAsync([new() { AccountId = accountId, Amount = 200 }]);
             _transactionRepository.Setup(repo => repo.CreateTransactionAsync(transaction, new Guid()))
                 .ReturnsAsync(transactionId);
 
@@ -475,7 +475,7 @@ namespace TransactionStore.Tests
 
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = transferModel.FromAccountId }))))
-                .ReturnsAsync(new List<Transaction> { new() { AccountId = transferModel.FromAccountId, Amount = 200 } });
+                .ReturnsAsync([new() { AccountId = transferModel.FromAccountId, Amount = 200 }]);
 
             _currencyExchangeClient.Setup(client => client.GetExchangeRate(transferModel.FromCurrency, transferModel.ToCurrency))
                 .Returns(exchangeRate);
