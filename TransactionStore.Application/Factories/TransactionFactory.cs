@@ -21,14 +21,10 @@ public class TransactionFactory(
     {
         var transaction = mapper.Map<Transaction>(transactionModel);
         transaction.TransactionType = transactionType;
-        if (transactionType == TransactionType.Withdrawal)
-        {
-            transaction.Amount = -(transaction.Amount - commission);
-        }
-        else
-        {
+        if (transactionType == TransactionType.Deposit)
             transaction.Amount -= commission;
-        }
+        else
+            transaction.Amount = -transaction.Amount;
         logger.LogDebug("Created transaction model: {Transaction}", transaction);
         return transaction;
     }
@@ -56,9 +52,10 @@ public class TransactionFactory(
     {
         logger.LogDebug("Entering CreateTransferTransactions with transferModel: {TransferModel}, exchangeRate: {ExchangeRate}, commission: {Commission}", transferModel, exchangeRate, commission);
 
-        var amountResult = transferModel.Amount - commission;
-        var transFrom = CreateTransferTransactionEntity(transferModel.FromAccountId, -amountResult, TransactionType.Transfer);
-        var transTo = CreateTransferTransactionEntity(transferModel.ToAccountId, amountResult * exchangeRate, TransactionType.Transfer);
+        var amountFrom = transferModel.Amount;
+        var amountTo = (amountFrom-commission) * exchangeRate;
+        var transFrom = CreateTransferTransactionEntity(transferModel.FromAccountId, -amountFrom, TransactionType.Transfer);
+        var transTo = CreateTransferTransactionEntity(transferModel.ToAccountId, amountTo, TransactionType.Transfer);
 
         return new TransferTransactionResult
         {
