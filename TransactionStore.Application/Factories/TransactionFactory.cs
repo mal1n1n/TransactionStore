@@ -3,21 +3,22 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
+using TransactionStore.Application.Messages;
 using TransactionStore.Application.Models;
 using TransactionStore.Core;
 using TransactionStore.Persistence.Entities;
 
 namespace TransactionStore.Application.Factories;
+
 public class TransactionFactory(
         IMapper mapper,
         ILogger<TransactionFactory> logger,
-        IConfiguration configuration) 
+        IConfiguration configuration,
+        ICurrencyExchangeClient currencyExchangeClient)
     : ITransactionFactory
 {
-    public Transaction CreateTransaction(TransactionModel transactionModel, TransactionType transactionType, out decimal commission)
+    public Transaction CreateTransaction(TransactionModel transactionModel, TransactionType transactionType, decimal commission)
     {
-        logger.LogDebug("Entering CreateTransaction with transactionModel: {TransactionModel}, transactionType: {TransactionType}", transactionModel, transactionType);
-        commission = CalculateCommission(transactionModel.Amount, transactionType);
         var transaction = mapper.Map<Transaction>(transactionModel);
         transaction.TransactionType = transactionType;
         if (transactionType == TransactionType.Withdrawal)
@@ -32,30 +33,54 @@ public class TransactionFactory(
         return transaction;
     }
 
-    public (Transaction transFrom, Transaction transTo, decimal commission) CreateTransferTransaction(TransferTransactionModel transferModel, decimal exchangeRate)
+    public TransactionCreatedMessage CreateTransactionMessage(Transaction transaction, CurrencyType currency, decimal commission)
     {
-        logger.LogDebug("Entering CreateTransferTransaction with transferModel: {TransferModel}, exchangeRate: {ExchangeRate}", transferModel, exchangeRate);
+        logger.LogDebug("Entering CreateTransactionMessage with transaction: {Transaction}, currency: {Currency}, commission: {Commission}", transaction, currency, commission);
 
-        var commission = CalculateCommission(transferModel.Amount,TransactionType.Transfer);
-
-        var transFrom = new Transaction
+        var amountRUB = ConvertToRUB(transaction.Amount, currency);
+        var message = new TransactionCreatedMessage
         {
-            AccountId = transferModel.FromAccountId,
-            Amount = -(transferModel.Amount - commission),
-            TransactionType = TransactionType.Transfer
-        };
-        var transTo = new Transaction
-        {
-            AccountId = transferModel.ToAccountId,
-            Amount = (transferModel.Amount - commission) * exchangeRate,
-            TransactionType = TransactionType.Transfer
+            Id = transaction.Id,
+            AccountId = transaction.AccountId,
+            Amount = transaction.Amount,
+            AmountRUB = amountRUB,
+            Commission = commission,
+            Date = transaction.Date,
+            TransactionType = transaction.TransactionType
         };
 
-        logger.LogDebug("Created transfer transaction models: transFrom: {TransFrom}, transTo: {TransTo}", transFrom, transTo);
-        return (transFrom, transTo, commission);
+        return message;
     }
 
-    private decimal CalculateCommission(decimal amount, TransactionType transactionType)
+    public TransferTransactionResult CreateTransferTransactions(TransferTransactionModel transferModel, decimal exchangeRate, decimal commission)
+    {
+        logger.LogDebug("Entering CreateTransferTransactions with transferModel: {TransferModel}, exchangeRate: {ExchangeRate}, commission: {Commission}", transferModel, exchangeRate, commission);
+
+        var amountResult = transferModel.Amount - commission;
+        var transFrom = CreateTransferTransactionEntity(transferModel.FromAccountId, -amountResult, TransactionType.Transfer);
+        var transTo = CreateTransferTransactionEntity(transferModel.ToAccountId, amountResult * exchangeRate, TransactionType.Transfer);
+
+        return new TransferTransactionResult
+        {
+            TransFrom = transFrom,
+            TransTo = transTo
+        };
+    }
+
+    public TransferTransactionResult CreateTransferTransactionMessages(TransferTransactionResult transferResult, TransferTransactionModel transferModel, decimal commission)
+    {
+        logger.LogDebug("Entering CreateTransferTransactionMessages with transferResult: {TransferResult}, transferModel: {TransferModel}, commission: {Commission}", transferResult, transferModel, commission);
+
+        var transFromMessage = CreateTransactionMessage(transferResult.TransFrom, transferModel.FromCurrency, commission);
+        var transToMessage = CreateTransactionMessage(transferResult.TransTo, transferModel.ToCurrency, 0);
+
+        transferResult.TransFromMessage = transFromMessage;
+        transferResult.TransToMessage = transToMessage;
+
+        return transferResult;
+    }
+
+    public decimal CalculateCommission(decimal amount, TransactionType transactionType)
     {
         string commissionKey = GetCommissionKey(transactionType);
 
@@ -68,6 +93,16 @@ public class TransactionFactory(
         return amount * (commissionRate.Value / 100);
     }
 
+    private Transaction CreateTransferTransactionEntity(Guid accountId, decimal amount, TransactionType transactionType)
+    {
+        return new Transaction
+        {
+            AccountId = accountId,
+            Amount = amount,
+            TransactionType = transactionType
+        };
+    }
+
     private string GetCommissionKey(TransactionType transactionType)
     {
         return transactionType switch
@@ -77,5 +112,22 @@ public class TransactionFactory(
             TransactionType.Transfer => "TransactionCommissionRates:Transfer",
             _ => throw new CommissionSettingException("Unsupported transaction type of transaction")
         };
+    }
+
+    private decimal ConvertToRUB(decimal amount, CurrencyType currency)
+    {
+        if (currency == CurrencyType.RUB)
+        {
+            return amount;
+        }
+
+        var exchangeRate = currencyExchangeClient.GetExchangeRate(currency, CurrencyType.RUB);
+        if (exchangeRate <= 0)
+        {
+            logger.LogCritical("Invalid exchange rate for Currency: {Currency}", currency);
+            throw new InvalidExchangeRateException("Invalid exchange rate");
+        }
+
+        return amount * exchangeRate;
     }
 }

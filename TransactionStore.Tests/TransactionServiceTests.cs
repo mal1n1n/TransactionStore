@@ -480,7 +480,7 @@ namespace TransactionStore.Tests
 
             _currencyExchangeClient.Setup(client => client.GetExchangeRate(transferModel.FromCurrency, transferModel.ToCurrency))
                 .Returns(exchangeRate);
-            _transactionFactory.Setup(factory => factory.CreateTransferTransaction(transferModel, exchangeRate))
+            _transactionFactory.Setup(factory => factory.CreateTransferTransactionsWithMessages(transferModel, exchangeRate))
                 .Returns((fromTransaction, toTransaction, commission));
             _transactionRepository.Setup(repo => repo.CreateTransferTransactionAsync(fromTransaction, toTransaction, It.IsAny<Guid?>()))
                 .ReturnsAsync((fromTransactionId, toTransactionId));
@@ -513,7 +513,7 @@ namespace TransactionStore.Tests
             _transactionRepository.Verify(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = transferModel.FromAccountId }))), Times.Once);
             _currencyExchangeClient.Verify(client => client.GetExchangeRate(transferModel.FromCurrency, transferModel.ToCurrency), Times.Once);
-            _transactionFactory.Verify(factory => factory.CreateTransferTransaction(transferModel, exchangeRate), Times.Once);
+            _transactionFactory.Verify(factory => factory.CreateTransferTransactionsWithMessages(transferModel, exchangeRate), Times.Once);
             _transactionRepository.Verify(repo => repo.CreateTransferTransactionAsync(fromTransaction, toTransaction, It.IsAny<Guid?>()), Times.Once);
         }
 
