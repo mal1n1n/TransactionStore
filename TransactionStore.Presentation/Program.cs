@@ -18,7 +18,7 @@ builder.Configuration
 builder.Services.ConfigureDbContext(builder.Configuration);
 builder.Services.ConfigurePersistence();  
 builder.Services.ConfigurePresentationServices();
-builder.Services.ConfigureApplication();  
+builder.Services.ConfigureApplication(builder.Configuration);  
 builder.Services.ConfigureFluentValidators();
 builder.Services.ConfigureMappers();
 var app = builder.Build();

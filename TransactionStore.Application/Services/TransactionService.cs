@@ -1,9 +1,10 @@
 ﻿using AutoMapper;
-using Dapper;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 using System.Data;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
+using TransactionStore.Application.Messages;
 using TransactionStore.Application.Models;
 using TransactionStore.Core;
 using TransactionStore.Persistence.Interfaces;
@@ -14,7 +15,8 @@ public class TransactionService(
         IMapper mapper, 
         ICurrencyExchangeClient currencyExchangeClient,
         ITransactionFactory transactionFactory,
-        ILogger<TransactionService> logger) 
+        ILogger<TransactionService> logger,
+        IPublishEndpoint publishEndpoint) 
     : ITransactionService
 {
     public async Task<TransactionModel> GetTransactionByIdAsync(Guid id)
@@ -133,6 +135,7 @@ public class TransactionService(
         {
             var depTransaction = transactionFactory.CreateTransaction(transactionModel, transactionType);
             await transactionRepository.AddAsync(depTransaction);
+            await publishEndpoint.Publish(mapper.Map<TransactionCreatedMessage>(depTransaction));
             logger.LogInformation("CreateTransaction successful for AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}", transactionModel.AccountId, transactionModel.Amount, transactionType);
             return depTransaction.Id;
         }
@@ -145,7 +148,9 @@ public class TransactionService(
         }
 
         var transaction = transactionFactory.CreateTransaction(transactionModel, transactionType);
+        
         var createdTransactionId = await transactionRepository.CreateTransactionAsync(transaction, lastTransaction);
+        await publishEndpoint.Publish(mapper.Map<TransactionCreatedMessage>(transaction));
 
         logger.LogInformation("CreateTransaction successful for AccountId: {AccountId}, Amount: {Amount}, TransactionType: {TransactionType}", transactionModel.AccountId, transactionModel.Amount, transactionType);
         return createdTransactionId;
@@ -162,7 +167,7 @@ public class TransactionService(
             throw new InsufficientFundsException("Insufficient funds");
         }
 
-        var exchangeRate = await currencyExchangeClient.GetExchangeRateAsync(transferModel.FromCurrency, transferModel.ToCurrency);
+        var exchangeRate = currencyExchangeClient.GetExchangeRate(transferModel.FromCurrency, transferModel.ToCurrency);
         if (exchangeRate <= 0)
         {
             logger.LogCritical("Invalid exchange rate for FromCurrency: {FromCurrency}, ToCurrency: {ToCurrency}", transferModel.FromCurrency, transferModel.ToCurrency);
@@ -170,9 +175,12 @@ public class TransactionService(
         }
 
         var (transFrom, transTo) = transactionFactory.CreateTransferTransaction(transferModel, exchangeRate);
-
+        
         var (createdFromId, createdToId) = await transactionRepository.CreateTransferTransactionAsync(transFrom, transTo, lastTransaction);
 
+        await publishEndpoint.Publish(mapper.Map<TransactionCreatedMessage>(transFrom));
+        await publishEndpoint.Publish(mapper.Map<TransactionCreatedMessage>(transTo));
+        
         logger.LogInformation("CreateTransferTransaction successful for FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}", transferModel.FromAccountId, transferModel.ToAccountId, transferModel.Amount);
         return [createdFromId, createdToId];
     }
