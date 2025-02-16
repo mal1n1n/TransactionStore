@@ -2,6 +2,7 @@ using TransactionStore.Presentation.Configurations;
 using TransactionStore.Persistence.Configurations;
 using TransactionStore.Application.Configurations;
 using Serilog;
+using TransactionStore.Presentation.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,13 +18,12 @@ builder.Configuration
     .AddEnvironmentVariables();
 builder.Services.ConfigureDbContext(builder.Configuration);
 builder.Services.ConfigurePersistence();  
-builder.Services.ConfigurePresentationServices();
+builder.Services.ConfigurePresentationServices(builder.Configuration);
 builder.Services.ConfigureApplication(builder.Configuration);  
 builder.Services.ConfigureFluentValidators();
 builder.Services.ConfigureMappers();
 
-var allowedIps = builder.Configuration.GetSection("AllowedIPs").Get<string[]>();
-builder.Services.AddSingleton(allowedIps);
+
 
 var app = builder.Build();
 
