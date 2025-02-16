@@ -69,18 +69,18 @@ public class TransactionControllerTests
         var request = new CreateTransactionRequest
         {
             AccountId = Guid.NewGuid(),
+            Currency = CurrencyType.USD,
             Amount = 100
         };
         var transactionModel = mapper.Map<TransactionModel>(request);
         transactionModel.Id = Guid.NewGuid();
         transactionModel.TransactionType = TransactionType.Deposit;
 
-        _transactionServiceMock.Setup(s => s.CreateTransaction(
+        _transactionServiceMock.Setup(s => s.CreateDepositTransaction(
             It.Is<TransactionModel>(t =>
             t.AccountId == request.AccountId &&
             t.Amount == request.Amount &&
-            t.TransactionType == TransactionType.Deposit),
-            TransactionType.Deposit))
+            t.TransactionType == TransactionType.Deposit)))
             .ReturnsAsync(transactionModel.Id);
 
         // Act
@@ -100,18 +100,18 @@ public class TransactionControllerTests
         var request = new CreateTransactionRequest
         {
             AccountId = Guid.NewGuid(),
+            Currency = CurrencyType.USD,
             Amount = 100
         };
         var transactionModel = mapper.Map<TransactionModel>(request);
         transactionModel.Id = Guid.NewGuid();
         transactionModel.TransactionType = TransactionType.Withdrawal;
 
-        _transactionServiceMock.Setup(s => s.CreateTransaction(
+        _transactionServiceMock.Setup(s => s.CreateWithdrawalTransaction(
             It.Is<TransactionModel>(t =>
             t.AccountId == request.AccountId &&
             t.Amount == request.Amount &&
-            t.TransactionType == TransactionType.Withdrawal),
-            TransactionType.Withdrawal))
+            t.TransactionType == TransactionType.Withdrawal)))
             .ReturnsAsync(transactionModel.Id);
 
         // Act

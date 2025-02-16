@@ -6,9 +6,8 @@ using TransactionStore.Persistence.Entities;
 namespace TransactionStore.Application.Interfaces;
 public interface ITransactionFactory
 {
-    decimal CalculateCommission(decimal amount, TransactionType transactionType);
-    Transaction CreateTransaction(TransactionModel transactionModel, TransactionType transactionType, decimal commission);
-    TransactionCreatedMessage CreateTransactionMessage(Transaction transaction, CurrencyType currency, decimal commission);
-    TransferTransactionResult CreateTransferTransactionMessages(TransferTransactionResult transferResult, TransferTransactionModel transferModel, decimal commission);
-    TransferTransactionResult CreateTransferTransactions(TransferTransactionModel transferModel, decimal exchangeRate, decimal commission);
+    Transaction CreateTransaction(TransactionModel transactionModel, TransactionType transactionType);
+    TransactionCreatedMessage CreateTransactionMessage(Transaction transaction, CurrencyType currency);
+    TransactionCreatedMessage CreateTransferTransactionMessage(Transaction TransFrom, Transaction TransTo, TransferTransactionModel transferModel);
+    TransferTransactionResult CreateTransferTransactions(TransferTransactionModel transferModel);
 }

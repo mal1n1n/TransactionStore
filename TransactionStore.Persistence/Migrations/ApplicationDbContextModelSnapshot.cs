@@ -32,20 +32,20 @@ namespace TransactionStore.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(8,2)");
 
                     b.Property<DateTime>("Date")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp")
                         .HasDefaultValueSql("NOW()");
 
-                    b.Property<int>("TransactionType")
-                        .HasColumnType("integer");
+                    b.Property<short>("TransactionType")
+                        .HasColumnType("smallint");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AccountId", "Date")
-                        .HasDatabaseName("IX_Transaction_AccountId_Date");
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("IX_Transaction_AccountId");
 
                     b.HasIndex("Date", "TransactionType")
                         .HasDatabaseName("IX_Transaction_Date_TransactionType");

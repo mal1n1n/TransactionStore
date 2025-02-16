@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using System.Data;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
-using TransactionStore.Application.Messages;
 using TransactionStore.Application.Models;
 using TransactionStore.Core;
 using TransactionStore.Persistence.Interfaces;
@@ -133,13 +132,12 @@ public class TransactionService(
     {
         logger.LogDebug("Entering CreateDepositTransaction with AccountId: {AccountId}, Amount: {Amount}", transactionModel.AccountId, transactionModel.Amount);
 
-        var commission = transactionFactory.CalculateCommission(transactionModel.Amount, TransactionType.Deposit);
-        var depTransaction = transactionFactory.CreateTransaction(transactionModel, TransactionType.Deposit, commission);
-        var depMessage = transactionFactory.CreateTransactionMessage(depTransaction, transactionModel.CurrencyType, commission);
+        var depTransaction = transactionFactory.CreateTransaction(transactionModel, TransactionType.Deposit);
         await transactionRepository.AddAsync(depTransaction);
+        var depMessage = transactionFactory.CreateTransactionMessage(depTransaction, transactionModel.CurrencyType);
         await publishEndpoint.Publish(depMessage);
 
-        logger.LogInformation("CreateDepositTransaction successful for AccountId: {AccountId}, Amount: {Amount}, Commission: {Commission}", transactionModel.AccountId, transactionModel.Amount, commission);
+        logger.LogInformation("CreateDepositTransaction successful for AccountId: {AccountId}, Amount: {Amount}", transactionModel.AccountId, transactionModel.Amount);
         return depTransaction.Id;
     }
 
@@ -154,14 +152,14 @@ public class TransactionService(
             throw new InsufficientFundsException("Insufficient funds");
         }
 
-        var commission = transactionFactory.CalculateCommission(transactionModel.Amount, TransactionType.Withdrawal);
-        var transaction = transactionFactory.CreateTransaction(transactionModel, TransactionType.Withdrawal, commission);
-        var message = transactionFactory.CreateTransactionMessage(transaction, transactionModel.CurrencyType, commission);
-        var createdTransactionId = await transactionRepository.CreateTransactionAsync(transaction, lastTransaction);
+        var transaction = transactionFactory.CreateTransaction(transactionModel, TransactionType.Withdrawal);
+        await transactionRepository.CreateTransactionAsync(transaction, lastTransaction);
+
+        var message = transactionFactory.CreateTransactionMessage(transaction, transactionModel.CurrencyType);
         await publishEndpoint.Publish(message);
 
-        logger.LogInformation("CreateWithdrawalTransaction successful for AccountId: {AccountId}, Amount: {Amount}, Commission: {Commission}", transactionModel.AccountId, transactionModel.Amount, commission);
-        return createdTransactionId;
+        logger.LogInformation("CreateWithdrawalTransaction successful for AccountId: {AccountId}, Amount: {Amount}", transactionModel.AccountId, transactionModel.Amount);
+        return transaction.Id;
     }
 
     public async Task<IEnumerable<Guid>> CreateTransferTransaction(TransferTransactionModel transferModel)
@@ -175,25 +173,15 @@ public class TransactionService(
             throw new InsufficientFundsException("Insufficient funds");
         }
 
-        var exchangeRate = currencyExchangeClient.GetExchangeRate(transferModel.FromCurrency, transferModel.ToCurrency);
-        if (exchangeRate <= 0)
-        {
-            logger.LogCritical("Invalid exchange rate for FromCurrency: {FromCurrency}, ToCurrency: {ToCurrency}", transferModel.FromCurrency, transferModel.ToCurrency);
-            throw new InvalidExchangeRateException("Invalid exchange rate");
-        }
+        var createdTransactions = transactionFactory.CreateTransferTransactions(transferModel);
+        await transactionRepository.CreateTransferTransactionAsync(createdTransactions.TransFrom, createdTransactions.TransTo, lastTransaction);
 
-        var commission = transactionFactory.CalculateCommission(transferModel.Amount, TransactionType.Transfer);
-        var createdTransactions = transactionFactory.CreateTransferTransactions(transferModel, exchangeRate, commission);
-        var createdTransactionMessages = transactionFactory.CreateTransferTransactionMessages(createdTransactions, transferModel, commission);
-
-        var (createdFromId, createdToId) = await transactionRepository.CreateTransferTransactionAsync(createdTransactions.TransFrom, createdTransactions.TransTo, lastTransaction);
-
-        await publishEndpoint.Publish(createdTransactionMessages.TransFromMessage);
-        await publishEndpoint.Publish(createdTransactionMessages.TransToMessage);
+        var createdTransactionMessage = transactionFactory.CreateTransferTransactionMessage(createdTransactions.TransFrom, createdTransactions.TransTo, transferModel);
+        await publishEndpoint.Publish(createdTransactionMessage);
 
         logger.LogInformation("CreateTransferTransaction successful for FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}, Commission: {Commission}",
-            transferModel.FromAccountId, transferModel.ToAccountId, transferModel.Amount, createdTransactionMessages.TransFromMessage.Commission);
-        return [createdFromId, createdToId];
+            transferModel.FromAccountId, transferModel.ToAccountId, transferModel.Amount, createdTransactionMessage.Commission);
+        return [createdTransactions.TransFrom.Id, createdTransactions.TransTo.Id];
     }
 
 

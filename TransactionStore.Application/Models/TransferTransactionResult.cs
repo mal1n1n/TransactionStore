@@ -6,7 +6,5 @@ namespace TransactionStore.Application.Models;
 public class TransferTransactionResult
 {
     public Transaction TransFrom { get; set; }
-    public TransactionCreatedMessage TransFromMessage { get; set; }
     public Transaction TransTo { get; set; }
-    public TransactionCreatedMessage TransToMessage { get; set; }
 }
