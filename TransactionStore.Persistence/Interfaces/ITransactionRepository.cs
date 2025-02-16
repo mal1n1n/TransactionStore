@@ -1,5 +1,4 @@
-﻿using TransactionStore.Persistence.DTOs;
-using TransactionStore.Persistence.Entities;
+﻿using TransactionStore.Persistence.Entities;
 
 namespace TransactionStore.Persistence.Interfaces;
 public interface ITransactionRepository : IBaseRepository<Transaction>
