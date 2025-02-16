@@ -13,7 +13,7 @@ public static class ApplicationConfiguration
 {
     public static void ConfigureApplication(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddScoped<ICommissionUtil, CommissionUtil>();
+        services.AddScoped<ICommissionUtils, CommissionUtils>();
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<ICurrencyExchangeClient, CurrencyExchangeClient>();
         services.AddScoped<ITransactionFactory, TransactionFactory>();

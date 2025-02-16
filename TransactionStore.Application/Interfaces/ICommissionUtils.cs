@@ -2,7 +2,7 @@
 
 namespace TransactionStore.Application.Interfaces
 {
-    public interface ICommissionUtil
+    public interface ICommissionUtils
     {
         decimal CalculateCommission(decimal amount, TransactionType transactionType);
     }

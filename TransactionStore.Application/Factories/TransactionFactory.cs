@@ -15,13 +15,13 @@ public class TransactionFactory(
         ILogger<TransactionFactory> logger,
         IConfiguration configuration,
         ICurrencyExchangeClient currencyExchangeClient,
-        ICommissionUtil commissionUtil)
+        ICommissionUtils commissionUtils)
     : ITransactionFactory
 {
     public Transaction CreateTransaction(TransactionModel transactionModel, TransactionType transactionType)
     {
         var transaction = mapper.Map<Transaction>(transactionModel);
-        var commission = commissionUtil.CalculateCommission(transaction.Amount, transactionType);
+        var commission = commissionUtils.CalculateCommission(transaction.Amount, transactionType);
         transaction.TransactionType = transactionType;
         if (transactionType == TransactionType.Deposit)
             transaction.Amount -= commission;
@@ -35,7 +35,7 @@ public class TransactionFactory(
     {
         logger.LogDebug("Entering CreateTransactionMessage with transaction: {Transaction}, currency: {Currency}", transaction, currency);
         var amountRub = currencyExchangeClient.GetExchangeRate(currency, CurrencyType.RUB) * transaction.Amount;
-        var commission = commissionUtil.CalculateCommission(transaction.Amount, transaction.TransactionType);
+        var commission = commissionUtils.CalculateCommission(transaction.Amount, transaction.TransactionType);
         var message = new TransactionCreatedMessage
         {
             Id = transaction.Id,
@@ -55,7 +55,7 @@ public class TransactionFactory(
         logger.LogDebug("Entering CreateTransferTransactions with transferModel: {TransferModel}", transferModel);
 
         var exchangeRate = currencyExchangeClient.GetExchangeRate(transferModel.FromCurrency, transferModel.ToCurrency);
-        var commission = commissionUtil.CalculateCommission(transferModel.Amount, TransactionType.Transfer);
+        var commission = commissionUtils.CalculateCommission(transferModel.Amount, TransactionType.Transfer);
         var amountFrom = transferModel.Amount;
         var amountTo = (amountFrom-commission) * exchangeRate;
         var transFrom = new Transaction(transferModel.FromAccountId, -amountFrom, TransactionType.Transfer);

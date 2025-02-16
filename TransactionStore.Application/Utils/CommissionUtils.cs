@@ -6,10 +6,10 @@ using TransactionStore.Core;
 
 namespace TransactionStore.Application.Utils;
 
-public class CommissionUtil(
+public class CommissionUtils(
         IConfiguration configuration,
-        ILogger<CommissionUtil> logger) 
-    : ICommissionUtil
+        ILogger<CommissionUtils> logger) 
+    : ICommissionUtils
 {
     public decimal CalculateCommission(decimal amount, TransactionType transactionType)
     {
