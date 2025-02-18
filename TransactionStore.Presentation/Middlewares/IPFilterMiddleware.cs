@@ -1,27 +1,24 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Options;
+using System.Net;
+using TransactionStore.Presentation.Models;
 
 namespace TransactionStore.Presentation.Middlewares;
-public class IPFilterMiddleware
+public class IpFilterMiddleware(
+    RequestDelegate next, 
+    IOptions<AllowedIpsOptions> allowedIPsOptions)
 {
-    private readonly RequestDelegate _next;
-    private readonly string _allowedIP;
-
-    public IPFilterMiddleware(RequestDelegate next, string allowedIP)
-    {
-        _next = next;
-        _allowedIP = allowedIP;
-    }
+    private readonly AllowedIpsOptions _allowedIPsOptions = allowedIPsOptions.Value;
 
     public async Task InvokeAsync(HttpContext context)
     {
         var remoteIp = context.Connection.RemoteIpAddress;
-        if (remoteIp == null || remoteIp.ToString() != _allowedIP)
+        if (remoteIp == null || !_allowedIPsOptions.AllowedIps.Contains(remoteIp.ToString()))
         {
             context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-            await context.Response.WriteAsync("Forbidden: Access is denied.");
+            await context.Response.WriteAsync($"Forbidden: Access is denied. {remoteIp}");
             return;
         }
 
-        await _next(context);
+        await next(context);
     }
 }
