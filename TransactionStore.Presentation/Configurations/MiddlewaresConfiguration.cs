@@ -9,6 +9,6 @@ public static class MiddlewaresConfiguration
     }
     public static void UseIPFilter(this IApplicationBuilder builder)
     {
-        builder.UseMiddleware<IPFilterMiddleware>();
+        builder.UseMiddleware<IpFilterMiddleware>();
     }
 }
