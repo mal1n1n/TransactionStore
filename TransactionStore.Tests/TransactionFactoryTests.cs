@@ -6,7 +6,10 @@ using Moq;
 using System.Globalization;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Factories;
+using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Models;
+using TransactionStore.Application.Services;
+using TransactionStore.Application.Utils;
 using TransactionStore.Core;
 using TransactionStore.Persistence.Entities;
 using Xunit;
@@ -18,6 +21,8 @@ public class TransactionFactoryTests
     private readonly IMapper _mapper;
     private readonly Mock<ILogger<TransactionFactory>> _logger;
     private readonly Mock<IConfiguration> _configuration;
+    private readonly Mock<ICurrencyExchangeClient> _currencyExchangeClient;
+    private readonly Mock<ICommissionUtils> _commissionUtils;
     private readonly TransactionFactory _sut;
 
     public TransactionFactoryTests()
@@ -27,16 +32,22 @@ public class TransactionFactoryTests
             cfg.CreateMap<TransactionModel, Transaction>().ReverseMap();
         });
         _mapper = new Mapper(configuration);
-        _logger = new Mock<ILogger<TransactionFactory>>();
-        _configuration = new Mock<IConfiguration>();
-        _sut = new TransactionFactory(_mapper, _logger.Object, _configuration.Object);
+        _logger = new();
+        _currencyExchangeClient = new();
+        _commissionUtils = new();
+        _configuration = new();
+        _sut = new TransactionFactory(
+            _mapper, 
+            _logger.Object, 
+            _configuration.Object, 
+            _currencyExchangeClient.Object,
+            _commissionUtils.Object);
     }
 
     [Theory]
-    [InlineData(TransactionType.Deposit, 100, 1.5, 1.50)]
-    [InlineData(TransactionType.Withdrawal, 100, 2.1, 2.10)]
-    [InlineData(TransactionType.Transfer, 100, 3.4, 3.40)]
-    public void CreateTransaction_CorrectlyCalculatesCommission(TransactionType transactionType, decimal amount, decimal commissionRate, decimal expectedCommission)
+    [InlineData(TransactionType.Deposit, 100, 1.50)]
+    [InlineData(TransactionType.Withdrawal, 100, 2.10)]
+    public void CreateTransaction_CorrectlyCalculatesCommission(TransactionType transactionType, decimal amount, decimal expectedCommission)
     {
         // Arrange
         var transactionModel = new TransactionModel
@@ -47,18 +58,15 @@ public class TransactionFactoryTests
             TransactionType = transactionType
         };
 
-        var sectionMock = new Mock<IConfigurationSection>();
-        sectionMock.Setup(a => a.Value).Returns(commissionRate.ToString(CultureInfo.InvariantCulture));
-        _configuration.Setup(config => config.GetSection($"TransactionCommissionRates:{transactionType}")).Returns(sectionMock.Object);
+        _commissionUtils.Setup(cu => cu.CalculateCommission(amount, transactionType)).Returns(expectedCommission);
 
         // Act
-        var transaction = _sut.CreateTransaction(transactionModel, transactionType, out var commission);
+        var transaction = _sut.CreateTransaction(transactionModel, transactionType);
 
         // Assert
-        commission.Should().Be(expectedCommission);
         if (transactionType == TransactionType.Withdrawal)
         {
-            transaction.Amount.Should().Be(-(amount - expectedCommission));
+            transaction.Amount.Should().Be(-amount);
         }
         else
         {
@@ -68,8 +76,8 @@ public class TransactionFactoryTests
 
 
     [Theory]
-    [InlineData(100, 3.0, 0.85, 3.0)]
-    public void CreateTransferTransaction_CorrectlyCalculatesCommission(decimal amount, decimal commissionRate, decimal exchangeRate, decimal expectedCommission)
+    [InlineData(100, 0.85, 3.0)]
+    public void CreateTransferTransaction_CorrectlyCalculatesCommission(decimal amount, decimal exchangeRate, decimal expectedCommission)
     {
         // Arrange
         var transferModel = new TransferTransactionModel
@@ -81,23 +89,20 @@ public class TransactionFactoryTests
             ToCurrency = CurrencyType.EUR
         };
 
-        var sectionMock = new Mock<IConfigurationSection>();
-        sectionMock.Setup(a => a.Value).Returns(commissionRate.ToString());
-        _configuration.Setup(config => config.GetSection("TransactionCommissionRates:Transfer")).Returns(sectionMock.Object);
+        _commissionUtils.Setup(cu => cu.CalculateCommission(amount, TransactionType.Transfer)).Returns(expectedCommission);
+        _currencyExchangeClient.Setup(ce => ce.GetExchangeRate(transferModel.FromCurrency, transferModel.ToCurrency)).Returns(exchangeRate);
 
         // Act
-        var (transFrom, transTo, commission) = _sut.CreateTransferTransaction(transferModel, exchangeRate);
+        var result = _sut.CreateTransferTransactions(transferModel);
 
         // Assert
-        commission.Should().Be(expectedCommission);
-        transFrom.Amount.Should().Be(-(amount - expectedCommission));
-        transTo.Amount.Should().Be((amount - expectedCommission) * exchangeRate);
+        result.TransFrom.Amount.Should().Be(-amount);
+        result.TransTo.Amount.Should().Be((amount - expectedCommission) * exchangeRate);
     }
 
     [Theory]
     [InlineData(TransactionType.Deposit)]
     [InlineData(TransactionType.Withdrawal)]
-    [InlineData(TransactionType.Transfer)]
     public void CreateTransaction_MissingCommissionRate_ThrowsCommissionSettingException(TransactionType transactionType)
     {
         // Arrange
@@ -109,45 +114,17 @@ public class TransactionFactoryTests
             TransactionType = transactionType
         };
 
-        var sectionMock = new Mock<IConfigurationSection>();
-        sectionMock.Setup(a => a.Value).Returns((string)null);
-        _configuration.Setup(config => config.GetSection($"TransactionCommissionRates:{transactionType}")).Returns(sectionMock.Object);
+        _commissionUtils.Setup(cu => cu.CalculateCommission(It.IsAny<decimal>(), transactionType)).Throws(new CommissionSettingException($"TransactionCommissionRates:{transactionType} is not configured or went broken."));
 
         // Act
-        Action act = () => _sut.CreateTransaction(transactionModel, transactionType, out _);
+        Action act = () => _sut.CreateTransaction(transactionModel, transactionType);
 
         // Assert
         act.Should().Throw<CommissionSettingException>()
             .WithMessage($"TransactionCommissionRates:{transactionType} is not configured or went broken.");
     }
 
-    [Theory]
-    [InlineData(TransactionType.Deposit)]
-    [InlineData(TransactionType.Withdrawal)]
-    [InlineData(TransactionType.Transfer)]
-    public void CreateTransaction_NegativeCommissionRate_ThrowsCommissionSettingException(TransactionType transactionType)
-    {
-        // Arrange
-        var transactionModel = new TransactionModel
-        {
-            AccountId = Guid.NewGuid(),
-            Amount = 100,
-            Date = DateTime.UtcNow,
-            TransactionType = transactionType
-        };
-
-        var sectionMock = new Mock<IConfigurationSection>();
-        sectionMock.Setup(a => a.Value).Returns("-1");
-        _configuration.Setup(config => config.GetSection($"TransactionCommissionRates:{transactionType}")).Returns(sectionMock.Object);
-
-        // Act
-        Action act = () => _sut.CreateTransaction(transactionModel, transactionType, out _);
-
-        // Assert
-        act.Should().Throw<CommissionSettingException>()
-            .WithMessage($"TransactionCommissionRates:{transactionType} is not configured or went broken.");
-    }
-
+    
     [Fact]
     public void CreateTransferTransaction_MissingCommissionRate_ThrowsCommissionSettingException()
     {
@@ -161,37 +138,10 @@ public class TransactionFactoryTests
             ToCurrency = CurrencyType.EUR
         };
 
-        var sectionMock = new Mock<IConfigurationSection>();
-        sectionMock.Setup(a => a.Value).Returns((string)null);
-        _configuration.Setup(config => config.GetSection("TransactionCommissionRates:Transfer")).Returns(sectionMock.Object);
+        _commissionUtils.Setup(cu => cu.CalculateCommission(It.IsAny<decimal>(), TransactionType.Transfer)).Throws(new CommissionSettingException("TransactionCommissionRates:Transfer is not configured or went broken."));
 
         // Act
-        Action act = () => _sut.CreateTransferTransaction(transferModel, 0.85m);
-
-        // Assert
-        act.Should().Throw<CommissionSettingException>()
-            .WithMessage("TransactionCommissionRates:Transfer is not configured or went broken.");
-    }
-
-    [Fact]
-    public void CreateTransferTransaction_NegativeCommissionRate_ThrowsCommissionSettingException()
-    {
-        // Arrange
-        var transferModel = new TransferTransactionModel
-        {
-            FromAccountId = Guid.NewGuid(),
-            ToAccountId = Guid.NewGuid(),
-            Amount = 100,
-            FromCurrency = CurrencyType.USD,
-            ToCurrency = CurrencyType.EUR
-        };
-
-        var sectionMock = new Mock<IConfigurationSection>();
-        sectionMock.Setup(a => a.Value).Returns("-1");
-        _configuration.Setup(config => config.GetSection("TransactionCommissionRates:Transfer")).Returns(sectionMock.Object);
-
-        // Act
-        Action act = () => _sut.CreateTransferTransaction(transferModel, 0.85m);
+        Action act = () => _sut.CreateTransferTransactions(transferModel);
 
         // Assert
         act.Should().Throw<CommissionSettingException>()
