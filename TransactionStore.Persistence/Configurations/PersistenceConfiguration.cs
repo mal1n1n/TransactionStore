@@ -8,12 +8,11 @@ using TransactionStore.Persistence.Repositories;
 namespace TransactionStore.Persistence.Configurations;
 public static class PersistenceConfiguration
 {
-    public static void ConfigurePersistence(this IServiceCollection services)
+    public static void ConfigurePersistence(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IDbConnection>(sp =>
         {
-            var configuration = sp.GetRequiredService<IConfiguration>();
             var connectionString = configuration.GetConnectionString("DefaultConnection");
             return new NpgsqlConnection(connectionString);
         });
