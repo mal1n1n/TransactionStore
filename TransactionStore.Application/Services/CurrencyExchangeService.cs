@@ -24,7 +24,7 @@ public class CurrencyExchangeClient(
     public decimal GetExchangeRate(CurrencyType fromCurrency, CurrencyType toCurrency)
     {
         logger.LogInformation($"Getting exchange rate from {fromCurrency} to {toCurrency}");
-
+        
         if (fromCurrency == toCurrency)
         {
             logger.LogWarning($"Exchange rate client trying to get rates for same currencies");
@@ -34,6 +34,11 @@ public class CurrencyExchangeClient(
         var key = $"{fromCurrency}{toCurrency}";
         if (_rates.TryGetValue(key, out var rate))
         {
+            if (rate <= 0)
+            {
+                logger.LogCritical("Invalid exchange rate for CurrencyPair: {CurrencyPair}", key);
+                throw new InvalidExchangeRateException("Invalid exchange rate");
+            }
             return rate;
         }
 

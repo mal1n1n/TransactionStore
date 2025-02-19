@@ -34,7 +34,7 @@ public class TransactionController(
         logger.LogInformation("CreateDepositTransaction called with AccountId: {AccountId}, Amount: {Amount}", request.AccountId, request.Amount);
         var transaction = mapper.Map<TransactionModel>(request);
         transaction.TransactionType = TransactionType.Deposit;
-        var response = await transactionService.CreateTransaction(transaction,TransactionType.Deposit);
+        var response = await transactionService.CreateDepositTransaction(transaction);
         logger.LogInformation("CreateDepositTransaction successful for AccountId: {AccountId}, Amount: {Amount}", request.AccountId, request.Amount);
         return Ok(response);
     }
@@ -46,7 +46,7 @@ public class TransactionController(
         logger.LogInformation("CreateWithdrawalTransaction called with AccountId: {AccountId}, Amount: {Amount}", request.AccountId, request.Amount);
         var transaction = mapper.Map<TransactionModel>(request);
         transaction.TransactionType = TransactionType.Withdrawal;
-        var response = await transactionService.CreateTransaction(transaction, TransactionType.Withdrawal);
+        var response = await transactionService.CreateWithdrawalTransaction(transaction);
         logger.LogInformation("CreateWithdrawalTransaction successful for AccountId: {AccountId}, Amount: {Amount}", request.AccountId, request.Amount);
         return Ok(response);
     }
@@ -55,10 +55,10 @@ public class TransactionController(
     [EndpointSummary("Создание трансферной транзакции")]
     public async Task<ActionResult<IEnumerable<Guid>>> CreateTransferTransaction([FromBody] CreateTransferRequest request)
     {
-        logger.LogInformation("CreateTransferTransaction called with FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}", request.FromAccountId, request.ToAccountId, request.Amount);
+        logger.LogInformation("CreateTransferTransactionsWithMessages called with FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}", request.FromAccountId, request.ToAccountId, request.Amount);
         var mappedTrans = mapper.Map<TransferTransactionModel>(request);
         var response = await transactionService.CreateTransferTransaction(mappedTrans);
-        logger.LogInformation("CreateTransferTransaction successful for FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}", request.FromAccountId, request.ToAccountId, request.Amount);
+        logger.LogInformation("CreateTransferTransactionsWithMessages successful for FromAccountId: {FromAccountId}, ToAccountId: {ToAccountId}, Amount: {Amount}", request.FromAccountId, request.ToAccountId, request.Amount);
         return Ok(response);
     }
 }

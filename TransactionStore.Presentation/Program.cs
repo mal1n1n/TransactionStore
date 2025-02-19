@@ -17,8 +17,8 @@ builder.Configuration
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 builder.Services.ConfigureDbContext(builder.Configuration);
-builder.Services.ConfigurePersistence();  
 builder.Services.ConfigurePresentationServices(builder.Configuration);
+builder.Services.ConfigurePersistence(builder.Configuration);  
 builder.Services.ConfigureApplication(builder.Configuration);  
 builder.Services.ConfigureFluentValidators();
 builder.Services.ConfigureMappers();

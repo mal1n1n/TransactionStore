@@ -3,79 +3,80 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
+using TransactionStore.Application.Messages;
 using TransactionStore.Application.Models;
 using TransactionStore.Core;
 using TransactionStore.Persistence.Entities;
 
 namespace TransactionStore.Application.Factories;
+
 public class TransactionFactory(
         IMapper mapper,
         ILogger<TransactionFactory> logger,
-        IConfiguration configuration) 
+        IConfiguration configuration,
+        ICurrencyExchangeClient currencyExchangeClient,
+        ICommissionUtils commissionUtils)
     : ITransactionFactory
 {
-    public Transaction CreateTransaction(TransactionModel transactionModel, TransactionType transactionType, out decimal commission)
+    public Transaction CreateTransaction(TransactionModel transactionModel, TransactionType transactionType)
     {
-        logger.LogDebug("Entering CreateTransaction with transactionModel: {TransactionModel}, transactionType: {TransactionType}", transactionModel, transactionType);
-        commission = CalculateCommission(transactionModel.Amount, transactionType);
         var transaction = mapper.Map<Transaction>(transactionModel);
+        var commission = commissionUtils.CalculateCommission(transaction.Amount, transactionType);
         transaction.TransactionType = transactionType;
-        if (transactionType == TransactionType.Withdrawal)
-        {
-            transaction.Amount = -(transaction.Amount - commission);
-        }
-        else
-        {
+        if (transactionType == TransactionType.Deposit)
             transaction.Amount -= commission;
-        }
+        else
+            transaction.Amount = -transaction.Amount;
         logger.LogDebug("Created transaction model: {Transaction}", transaction);
         return transaction;
     }
 
-    public (Transaction transFrom, Transaction transTo, decimal commission) CreateTransferTransaction(TransferTransactionModel transferModel, decimal exchangeRate)
+    public TransactionCreatedMessage CreateTransactionMessage(Transaction transaction, CurrencyType currency)
     {
-        logger.LogDebug("Entering CreateTransferTransaction with transferModel: {TransferModel}, exchangeRate: {ExchangeRate}", transferModel, exchangeRate);
-
-        var commission = CalculateCommission(transferModel.Amount,TransactionType.Transfer);
-
-        var transFrom = new Transaction
+        logger.LogDebug("Entering CreateTransactionMessage with transaction: {Transaction}, currency: {Currency}", transaction, currency);
+        var amountRub = currencyExchangeClient.GetExchangeRate(currency, CurrencyType.RUB) * transaction.Amount;
+        var commission = commissionUtils.CalculateCommission(transaction.Amount, transaction.TransactionType);
+        var message = new TransactionCreatedMessage
         {
-            AccountId = transferModel.FromAccountId,
-            Amount = -(transferModel.Amount - commission),
-            TransactionType = TransactionType.Transfer
-        };
-        var transTo = new Transaction
-        {
-            AccountId = transferModel.ToAccountId,
-            Amount = (transferModel.Amount - commission) * exchangeRate,
-            TransactionType = TransactionType.Transfer
+            Id = transaction.Id,
+            AccountId = transaction.AccountId,
+            Amount = transaction.Amount,
+            AmountRub = amountRub,
+            Commission = commission,
+            Date = transaction.Date,
+            TransactionType = transaction.TransactionType
         };
 
-        logger.LogDebug("Created transfer transaction models: transFrom: {TransFrom}, transTo: {TransTo}", transFrom, transTo);
-        return (transFrom, transTo, commission);
+        return message;
     }
 
-    private decimal CalculateCommission(decimal amount, TransactionType transactionType)
+    public TransferTransactionResult CreateTransferTransactions(TransferTransactionModel transferModel)
     {
-        string commissionKey = GetCommissionKey(transactionType);
+        logger.LogDebug("Entering CreateTransferTransactions with transferModel: {TransferModel}", transferModel);
 
-        var commissionRate = configuration.GetValue<decimal?>(commissionKey);
-        if (commissionRate == null || commissionRate.Value < 0)
+        var exchangeRate = currencyExchangeClient.GetExchangeRate(transferModel.FromCurrency, transferModel.ToCurrency);
+        var commission = commissionUtils.CalculateCommission(transferModel.Amount, TransactionType.Transfer);
+        var amountFrom = transferModel.Amount;
+        var amountTo = (amountFrom-commission) * exchangeRate;
+        var transFrom = new Transaction(transferModel.FromAccountId, -amountFrom, TransactionType.Transfer);
+        var transTo = new Transaction(transferModel.ToAccountId, amountTo, TransactionType.Transfer);
+
+        return new TransferTransactionResult
         {
-            logger.LogCritical($"{commissionKey} is not configured or negative");
-            throw new CommissionSettingException($"{commissionKey} is not configured or went broken.");
-        }
-        return amount * (commissionRate.Value / 100);
+            TransFrom = transFrom,
+            TransTo = transTo
+        };
     }
 
-    private string GetCommissionKey(TransactionType transactionType)
+    public TransactionCreatedMessage CreateTransferTransactionMessage(Transaction TransFrom, Transaction TransTo, TransferTransactionModel transferModel)
     {
-        return transactionType switch
-        {
-            TransactionType.Deposit => "TransactionCommissionRates:Deposit",
-            TransactionType.Withdrawal => "TransactionCommissionRates:Withdrawal",
-            TransactionType.Transfer => "TransactionCommissionRates:Transfer",
-            _ => throw new CommissionSettingException("Unsupported transaction type of transaction")
-        };
+        logger.LogDebug("Entering CreateTransferTransactionMessage for transaction: {transactionFromId}, to: {transactionToId}", TransFrom.Id, TransTo.Id);
+        var transFromMessage = CreateTransactionMessage(TransFrom, transferModel.FromCurrency);
+        var transToMessage = CreateTransactionMessage(TransTo, transferModel.ToCurrency);
+
+        transToMessage.Commission = 0; // Commission is already included
+        transFromMessage.RelatedTransaction = transToMessage;
+
+        return transFromMessage;
     }
 }
