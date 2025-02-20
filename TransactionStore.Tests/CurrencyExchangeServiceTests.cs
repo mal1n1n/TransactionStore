@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Moq;
 using TransactionStore.Application.Exceptions;
-using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Services;
 using TransactionStore.Core;
 using Xunit;
@@ -19,8 +18,12 @@ public class CurrencyExchangeServiceTests
         _sut = new CurrencyExchangeClient(_loggerMock.Object);
     }
 
-    [Fact]
-    public void UpdateRates_ShouldUpdateRatesCorrectly()
+    [Theory]
+    [InlineData("USDEUR", 0.85)]
+    [InlineData("USDJPY", 110)]
+    [InlineData("EURUSD", 1.18)]
+    [InlineData("JPYEUR", 0.0077)]
+    public void UpdateRates_ShouldUpdateRatesCorrectly(string currencyPair, decimal expectedRate)
     {
         // Arrange
         var rates = new Dictionary<string, decimal>
@@ -35,14 +38,15 @@ public class CurrencyExchangeServiceTests
         _sut.UpdateRates(rates);
 
         // Assert
-        Assert.Equal(0.85m, _sut.GetExchangeRate(CurrencyType.USD, CurrencyType.EUR));
-        Assert.Equal(1.18m, _sut.GetExchangeRate(CurrencyType.EUR, CurrencyType.USD));
-        Assert.Equal(110m, _sut.GetExchangeRate(CurrencyType.USD, CurrencyType.JPY));
-        Assert.Equal(0.0077m, _sut.GetExchangeRate(CurrencyType.JPY, CurrencyType.EUR));
+        var fromCurrency = (CurrencyType)Enum.Parse(typeof(CurrencyType), currencyPair.Substring(0, 3));
+        var toCurrency = (CurrencyType)Enum.Parse(typeof(CurrencyType), currencyPair.Substring(3, 3));
+        Assert.Equal(expectedRate, _sut.GetExchangeRate(fromCurrency, toCurrency));
     }
 
-    [Fact]
-    public void GetExchangeRate_ShouldReturnCorrectRate()
+    [Theory]
+    [InlineData(CurrencyType.USD, CurrencyType.EUR, 0.85)]
+    [InlineData(CurrencyType.USD, CurrencyType.JPY, 110)]
+    public void GetExchangeRate_ShouldReturnCorrectRate(CurrencyType fromCurrency, CurrencyType toCurrency, decimal expectedRate)
     {
         // Arrange
         var rates = new Dictionary<string, decimal>
@@ -53,24 +57,28 @@ public class CurrencyExchangeServiceTests
         _sut.UpdateRates(rates);
 
         // Act
-        var rate = _sut.GetExchangeRate(CurrencyType.USD, CurrencyType.EUR);
+        var rate = _sut.GetExchangeRate(fromCurrency, toCurrency);
 
         // Assert
-        Assert.Equal(0.85m, rate);
+        Assert.Equal(expectedRate, rate);
     }
 
-    [Fact]
-    public void GetExchangeRate_SameCurrency_ShouldReturnOne()
+    [Theory]
+    [InlineData(CurrencyType.USD)]
+    [InlineData(CurrencyType.EUR)]
+    public void GetExchangeRate_SameCurrency_ShouldReturnOne(CurrencyType currency)
     {
         // Act
-        var rate = _sut.GetExchangeRate(CurrencyType.USD, CurrencyType.USD);
+        var rate = _sut.GetExchangeRate(currency, currency);
 
         // Assert
         Assert.Equal(1m, rate);
     }
 
-    [Fact]
-    public void GetExchangeRate_InvalidCurrency_ShouldThrowExchangeRateNotFoundException()
+    [Theory]
+    [InlineData(CurrencyType.USD, CurrencyType.ARS)]
+    [InlineData(CurrencyType.EUR, CurrencyType.RUB)]
+    public void GetExchangeRate_InvalidCurrency_ShouldThrowExchangeRateNotFoundException(CurrencyType fromCurrency, CurrencyType toCurrency)
     {
         // Arrange
         var rates = new Dictionary<string, decimal>
@@ -79,9 +87,6 @@ public class CurrencyExchangeServiceTests
             { "USDJPY", 110m }
         };
         _sut.UpdateRates(rates);
-
-        var fromCurrency = CurrencyType.USD;
-        var toCurrency = CurrencyType.ARS;
 
         // Act & Assert
         Assert.Throws<ExchangeRateNotFoundException>(() => _sut.GetExchangeRate(fromCurrency, toCurrency));
