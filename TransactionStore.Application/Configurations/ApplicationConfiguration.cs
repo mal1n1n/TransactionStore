@@ -1,10 +1,10 @@
 ﻿using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MYPBackendMicroserviceIntegrations.Messages;
 using TransactionStore.Application.Consumers;
 using TransactionStore.Application.Factories;
 using TransactionStore.Application.Interfaces;
-using TransactionStore.Application.Messages;
 using TransactionStore.Application.Services;
 using TransactionStore.Application.Utils;
 

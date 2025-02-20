@@ -3,9 +3,9 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
+using MYPBackendMicroserviceIntegrations.Enums;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Models;
-using TransactionStore.Core;
 using TransactionStore.Domain.Controllers;
 using TransactionStore.Presentation.DTOs.Responses;
 

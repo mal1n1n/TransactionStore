@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MYPBackendMicroserviceIntegrations.Enums;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
-using TransactionStore.Core;
 
 namespace TransactionStore.Application.Utils;
 

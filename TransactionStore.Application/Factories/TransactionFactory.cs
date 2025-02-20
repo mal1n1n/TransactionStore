@@ -1,19 +1,18 @@
 ﻿using AutoMapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
-using TransactionStore.Application.Messages;
 using TransactionStore.Application.Models;
 using TransactionStore.Core;
 using TransactionStore.Persistence.Entities;
+using MYPBackendMicroserviceIntegrations.Messages;
+using MYPBackendMicroserviceIntegrations.Enums;
 
 namespace TransactionStore.Application.Factories;
 
 public class TransactionFactory(
         IMapper mapper,
         ILogger<TransactionFactory> logger,
-        IConfiguration configuration,
         ICurrencyExchangeClient currencyExchangeClient,
         ICommissionUtils commissionUtils)
     : ITransactionFactory
@@ -30,7 +29,6 @@ public class TransactionFactory(
         logger.LogDebug("Created transaction model: {Transaction}", transaction);
         return transaction;
     }
-
     public TransactionCreatedMessage CreateTransactionMessage(Transaction transaction, CurrencyType currency)
     {
         logger.LogDebug("Entering CreateTransactionMessage with transaction: {Transaction}, currency: {Currency}", transaction, currency);
