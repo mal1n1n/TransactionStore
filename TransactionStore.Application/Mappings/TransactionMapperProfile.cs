@@ -1,7 +1,8 @@
 ﻿using TransactionStore.Application.Models;
 using TransactionStore.Persistence.Entities;
 using AutoMapper;
-using TransactionStore.Application.Messages;
+using MYPBackendMicroserviceIntegrations.Messages;
+
 namespace TransactionStore.Application.Mappings;
 public class TransactionMapperProfile: Profile
 {

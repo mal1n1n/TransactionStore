@@ -1,4 +1,4 @@
-﻿using TransactionStore.Core;
+﻿using MYPBackendMicroserviceIntegrations.Enums;
 
 namespace TransactionStore.Persistence.Entities;
 public class Transaction

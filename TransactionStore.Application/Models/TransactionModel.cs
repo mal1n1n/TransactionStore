@@ -1,4 +1,5 @@
-﻿using TransactionStore.Core;
+﻿using MYPBackendMicroserviceIntegrations.Enums;
+using TransactionStore.Core;
 namespace TransactionStore.Application.Models;
 public class TransactionModel
 {

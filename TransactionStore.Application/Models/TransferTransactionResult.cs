@@ -1,5 +1,4 @@
-﻿using TransactionStore.Application.Messages;
-using TransactionStore.Persistence.Entities;
+﻿using TransactionStore.Persistence.Entities;
 
 namespace TransactionStore.Application.Models;
 

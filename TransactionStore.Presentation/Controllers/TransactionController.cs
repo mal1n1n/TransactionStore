@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using MYPBackendMicroserviceIntegrations.Enums;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Models;
 using TransactionStore.Core;

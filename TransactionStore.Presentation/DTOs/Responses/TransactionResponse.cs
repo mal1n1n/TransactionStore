@@ -1,5 +1,5 @@
-﻿using System.Text.Json.Serialization;
-using TransactionStore.Core;
+﻿using MYPBackendMicroserviceIntegrations.Enums;
+using System.Text.Json.Serialization;
 
 namespace TransactionStore.Presentation.DTOs.Responses;
 public class TransactionResponse

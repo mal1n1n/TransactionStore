@@ -3,13 +3,11 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Globalization;
+using MYPBackendMicroserviceIntegrations.Enums;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Factories;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Models;
-using TransactionStore.Application.Services;
-using TransactionStore.Application.Utils;
 using TransactionStore.Core;
 using TransactionStore.Persistence.Entities;
 using Xunit;
@@ -20,7 +18,6 @@ public class TransactionFactoryTests
 {
     private readonly IMapper _mapper;
     private readonly Mock<ILogger<TransactionFactory>> _logger;
-    private readonly Mock<IConfiguration> _configuration;
     private readonly Mock<ICurrencyExchangeClient> _currencyExchangeClient;
     private readonly Mock<ICommissionUtils> _commissionUtils;
     private readonly TransactionFactory _sut;
@@ -35,11 +32,9 @@ public class TransactionFactoryTests
         _logger = new();
         _currencyExchangeClient = new();
         _commissionUtils = new();
-        _configuration = new();
         _sut = new TransactionFactory(
             _mapper, 
             _logger.Object, 
-            _configuration.Object, 
             _currencyExchangeClient.Object,
             _commissionUtils.Object);
     }

@@ -1,18 +1,17 @@
 ﻿using AutoMapper;
 using MassTransit;
 using Microsoft.Extensions.Logging;
+using MYPBackendMicroserviceIntegrations.Enums;
 using System.Data;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Models;
-using TransactionStore.Core;
 using TransactionStore.Persistence.Interfaces;
 
 namespace TransactionStore.Application.Services;
 public class TransactionService(
         ITransactionRepository transactionRepository,
-        IMapper mapper, 
-        ICurrencyExchangeClient currencyExchangeClient,
+        IMapper mapper,
         ITransactionFactory transactionFactory,
         ILogger<TransactionService> logger,
         IPublishEndpoint publishEndpoint) 

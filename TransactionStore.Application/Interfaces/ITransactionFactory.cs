@@ -1,4 +1,5 @@
-﻿using TransactionStore.Application.Messages;
+﻿using MYPBackendMicroserviceIntegrations.Enums;
+using MYPBackendMicroserviceIntegrations.Messages;
 using TransactionStore.Application.Models;
 using TransactionStore.Core;
 using TransactionStore.Persistence.Entities;

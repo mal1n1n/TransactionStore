@@ -3,10 +3,11 @@ using FluentAssertions;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using Moq;
+using MYPBackendMicroserviceIntegrations.Enums;
+using MYPBackendMicroserviceIntegrations.Messages;
 using System.Linq.Expressions;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
-using TransactionStore.Application.Messages;
 using TransactionStore.Application.Models;
 using TransactionStore.Application.Services;
 using TransactionStore.Core;
@@ -20,7 +21,6 @@ namespace TransactionStore.Tests
     {
         private readonly IMapper _mapper;
         private readonly Mock<ITransactionRepository> _transactionRepository;
-        private readonly Mock<ICurrencyExchangeClient> _currencyExchangeClient;
         private readonly Mock<ITransactionFactory> _transactionFactory;
         private readonly Mock<ILogger<TransactionService>> _logger;
         private readonly TransactionService _sut;
@@ -35,14 +35,12 @@ namespace TransactionStore.Tests
             });
             _mapper = new Mapper(configuration);
             _transactionRepository = new Mock<ITransactionRepository>();
-            _currencyExchangeClient = new Mock<ICurrencyExchangeClient>();
             _transactionFactory = new Mock<ITransactionFactory>();
             _logger = new Mock<ILogger<TransactionService>>();
             _publishEndpoint = new Mock<IPublishEndpoint>();
             _sut = new TransactionService(
                 _transactionRepository.Object,
                 _mapper,
-                _currencyExchangeClient.Object,
                 _transactionFactory.Object,
                 _logger.Object,
                 _publishEndpoint.Object);
