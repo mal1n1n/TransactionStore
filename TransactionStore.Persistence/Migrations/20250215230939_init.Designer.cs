@@ -12,7 +12,7 @@ using TransactionStore.Persistence.Data;
 namespace TransactionStore.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250126153805_init")]
+    [Migration("20250215230939_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -35,20 +35,23 @@ namespace TransactionStore.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(8,2)");
 
                     b.Property<DateTime>("Date")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp")
                         .HasDefaultValueSql("NOW()");
 
-                    b.Property<int>("TransactionType")
-                        .HasColumnType("integer");
+                    b.Property<short>("TransactionType")
+                        .HasColumnType("smallint");
 
                     b.HasKey("Id");
 
                     b.HasIndex("AccountId")
                         .HasDatabaseName("IX_Transaction_AccountId");
+
+                    b.HasIndex("Date", "TransactionType")
+                        .HasDatabaseName("IX_Transaction_Date_TransactionType");
 
                     b.ToTable("Transactions");
                 });

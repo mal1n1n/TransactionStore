@@ -6,12 +6,14 @@ using TransactionStore.Application.Factories;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Messages;
 using TransactionStore.Application.Services;
+using TransactionStore.Application.Utils;
 
 namespace TransactionStore.Application.Configurations;
 public static class ApplicationConfiguration
 {
     public static void ConfigureApplication(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddScoped<ICommissionUtils, CommissionUtils>();
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<ICurrencyExchangeClient, CurrencyExchangeClient>();
         services.AddScoped<ITransactionFactory, TransactionFactory>();
@@ -33,6 +35,8 @@ public static class ApplicationConfiguration
                 {
                     configTopology.SetEntityName("transactions.fanout");
                 });
+                cfg.AutoStart = true;
+                cfg.ConfigureEndpoints(context);
             });
         });
     }
