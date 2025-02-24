@@ -1,6 +1,8 @@
 ﻿using MassTransit;
+using MassTransit.Transports.Fabric;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using MYPBackendMicroserviceIntegrations.Messages;
 using TransactionStore.Application.Consumers;
 using TransactionStore.Application.Factories;
@@ -17,26 +19,32 @@ public static class ApplicationConfiguration
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<ICurrencyExchangeClient, CurrencyExchangeClient>();
         services.AddScoped<ITransactionFactory, TransactionFactory>();
+        services.AddOptions<RabbitMqConfiguration>()
+            .Configure<IConfiguration>((options, configuration) =>
+            {
+                configuration.GetSection("RabbitMQ").Bind(options);
+            });
         services.AddMassTransit(x =>
         {
             x.UsingRabbitMq((context, cfg) =>
             {
-                cfg.Host(configuration["RabbitMQ:Host"], h =>
+                var rabbitMqConfig = context.GetRequiredService<IOptions<RabbitMqConfiguration>>().Value;
+
+                cfg.Host(rabbitMqConfig.Host, h =>
                 {
-                    h.Username(configuration["RabbitMQ:Username"]);
-                    h.Password(configuration["RabbitMQ:Password"]);
+                    h.Username(rabbitMqConfig.Username);
+                    h.Password(rabbitMqConfig.Password);
                 });
 
-                cfg.ReceiveEndpoint("currency-exchange-queue", e =>
+                cfg.ReceiveEndpoint(rabbitMqConfig.CurrencyExchangeRateEndpoint, e =>
                 {
                     e.Consumer<CurrencyExchangeRateConsumer>(context);
                 });
-                cfg.Message<TransactionCreatedMessage>(configTopology =>
+
+                cfg.Publish<TransactionCreatedMessage>(e =>
                 {
-                    configTopology.SetEntityName("transactions.fanout");
+                    e.Durable = true;
                 });
-                cfg.AutoStart = true;
-                cfg.ConfigureEndpoints(context);
             });
         });
     }
