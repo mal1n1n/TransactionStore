@@ -2,7 +2,6 @@
 using MYPBackendMicroserviceIntegrations.Enums;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
-using TransactionStore.Core;
 
 namespace TransactionStore.Application.Services;
 public class CurrencyExchangeClient(
@@ -20,11 +19,11 @@ public class CurrencyExchangeClient(
             _rates[rate.Key] = rate.Value;
         }
 
-        foreach (var fromCurrency in Enum.GetValues<CurrencyType>())
+        foreach (var fromCurrency in Enum.GetValues<Currency>())
         {
-            foreach (var toCurrency in Enum.GetValues<CurrencyType>())
+            foreach (var toCurrency in Enum.GetValues<Currency>())
             {
-                if (fromCurrency == toCurrency || fromCurrency == CurrencyType.Unknown || toCurrency == CurrencyType.Unknown)
+                if (fromCurrency == toCurrency || fromCurrency == Currency.Unknown || toCurrency == Currency.Unknown)
                     continue;
 
                 var fromBaseKey = $"{baseCurrency}{fromCurrency}";
@@ -40,7 +39,7 @@ public class CurrencyExchangeClient(
         }
     }
 
-    public decimal GetExchangeRate(CurrencyType fromCurrency, CurrencyType toCurrency)
+    public decimal GetExchangeRate(Currency fromCurrency, Currency toCurrency)
     {
         logger.LogInformation($"Getting exchange rate from {fromCurrency} to {toCurrency}");
         

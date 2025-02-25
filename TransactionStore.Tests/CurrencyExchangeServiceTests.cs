@@ -3,7 +3,6 @@ using Moq;
 using MYPBackendMicroserviceIntegrations.Enums;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Services;
-using TransactionStore.Core;
 using Xunit;
 
 namespace TransactionStore.Tests;
@@ -39,16 +38,16 @@ public class CurrencyExchangeServiceTests
         _sut.UpdateRates(Currency.USD, rates);
 
         // Assert
-        var fromCurrency = (CurrencyType)Enum.Parse(typeof(CurrencyType), currencyPair.Substring(0, 3));
-        var toCurrency = (CurrencyType)Enum.Parse(typeof(CurrencyType), currencyPair.Substring(3, 3));
+        var fromCurrency = (Currency)Enum.Parse(typeof(Currency), currencyPair.Substring(0, 3));
+        var toCurrency = (Currency)Enum.Parse(typeof(Currency), currencyPair.Substring(3, 3));
         var actualRate = _sut.GetExchangeRate(fromCurrency, toCurrency);
         Assert.Equal(expectedRate, actualRate, 4);
     }
 
     [Theory]
-    [InlineData(CurrencyType.USD, CurrencyType.EUR, 0.85)]
-    [InlineData(CurrencyType.USD, CurrencyType.JPY, 110)]
-    public void GetExchangeRate_ShouldReturnCorrectRate(CurrencyType fromCurrency, CurrencyType toCurrency, decimal expectedRate)
+    [InlineData(Currency.USD, Currency.EUR, 0.85)]
+    [InlineData(Currency.USD, Currency.JPY, 110)]
+    public void GetExchangeRate_ShouldReturnCorrectRate(Currency fromCurrency, Currency toCurrency, decimal expectedRate)
     {
         // Arrange
         var rates = new Dictionary<string, decimal>
@@ -66,9 +65,9 @@ public class CurrencyExchangeServiceTests
     }
 
     [Theory]
-    [InlineData(CurrencyType.USD)]
-    [InlineData(CurrencyType.EUR)]
-    public void GetExchangeRate_SameCurrency_ShouldReturnOne(CurrencyType currency)
+    [InlineData(Currency.USD)]
+    [InlineData(Currency.EUR)]
+    public void GetExchangeRate_SameCurrency_ShouldReturnOne(Currency currency)
     {
         // Act
         var rate = _sut.GetExchangeRate(currency, currency);
@@ -78,9 +77,9 @@ public class CurrencyExchangeServiceTests
     }
 
     [Theory]
-    [InlineData(CurrencyType.USD, CurrencyType.ARS)]
-    [InlineData(CurrencyType.EUR, CurrencyType.RUB)]
-    public void GetExchangeRate_InvalidCurrency_ShouldThrowExchangeRateNotFoundException(CurrencyType fromCurrency, CurrencyType toCurrency)
+    [InlineData(Currency.USD, Currency.ARS)]
+    [InlineData(Currency.EUR, Currency.RUB)]
+    public void GetExchangeRate_InvalidCurrency_ShouldThrowExchangeRateNotFoundException(Currency fromCurrency, Currency toCurrency)
     {
         // Arrange
         var rates = new Dictionary<string, decimal>

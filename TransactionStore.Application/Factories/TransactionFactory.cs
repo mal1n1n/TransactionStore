@@ -1,9 +1,7 @@
 ﻿using AutoMapper;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Models;
-using TransactionStore.Core;
 using TransactionStore.Persistence.Entities;
 using MYPBackendMicroserviceIntegrations.Messages;
 using MYPBackendMicroserviceIntegrations.Enums;
@@ -29,10 +27,10 @@ public class TransactionFactory(
         logger.LogDebug("Created transaction model: {Transaction}", transaction);
         return transaction;
     }
-    public TransactionCreatedMessage CreateTransactionMessage(Transaction transaction, CurrencyType currency)
+    public TransactionCreatedMessage CreateTransactionMessage(Transaction transaction, Currency currency)
     {
         logger.LogDebug("Entering CreateTransactionMessage with transaction: {Transaction}, currency: {Currency}", transaction, currency);
-        var amountRub = currencyExchangeClient.GetExchangeRate(currency, CurrencyType.RUB) * transaction.Amount;
+        var amountRub = currencyExchangeClient.GetExchangeRate(currency, Currency.RUB) * transaction.Amount;
         var commission = commissionUtils.CalculateCommission(transaction.Amount, transaction.TransactionType);
         var message = new TransactionCreatedMessage
         {

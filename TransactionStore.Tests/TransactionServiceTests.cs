@@ -10,7 +10,6 @@ using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Models;
 using TransactionStore.Application.Services;
-using TransactionStore.Core;
 using TransactionStore.Persistence.Entities;
 using TransactionStore.Persistence.Interfaces;
 using Xunit;
@@ -342,7 +341,7 @@ namespace TransactionStore.Tests
                 Amount = 100,
                 Date = DateTime.UtcNow,
                 TransactionType = TransactionType.Deposit,
-                CurrencyType = CurrencyType.BGN
+                Currency = Currency.BGN
             };
             var transaction = _mapper.Map<Transaction>(transactionModel);
             var expectedMessage = _mapper.Map<TransactionCreatedMessage>(transaction);
@@ -351,7 +350,7 @@ namespace TransactionStore.Tests
                 .Returns(transaction);
             _transactionRepository.Setup(repo => repo.AddAsync(transaction))
                 .Returns(Task.CompletedTask);
-            _transactionFactory.Setup(factory => factory.CreateTransactionMessage(transaction, CurrencyType.BGN))
+            _transactionFactory.Setup(factory => factory.CreateTransactionMessage(transaction, Currency.BGN))
                 .Returns(expectedMessage);
 
             // Act
@@ -383,7 +382,7 @@ namespace TransactionStore.Tests
                 Amount = 100,
                 Date = DateTime.UtcNow,
                 TransactionType = TransactionType.Withdrawal,
-                CurrencyType = CurrencyType.BGN
+                Currency = Currency.BGN
             };
             var transaction = _mapper.Map<Transaction>(transactionModel);
             var expectedMessage = _mapper.Map<TransactionCreatedMessage>(transaction);
@@ -395,7 +394,7 @@ namespace TransactionStore.Tests
                 .ReturnsAsync([new() { AccountId = accountId, Amount = 200 }]);
             _transactionRepository.Setup(repo => repo.CreateTransactionAsync(transaction, It.IsAny<Guid?>()))
                 .Returns(Task.CompletedTask);
-            _transactionFactory.Setup(factory => factory.CreateTransactionMessage(transaction, CurrencyType.BGN))
+            _transactionFactory.Setup(factory => factory.CreateTransactionMessage(transaction, Currency.BGN))
                 .Returns(expectedMessage);
 
             // Act
@@ -426,8 +425,8 @@ namespace TransactionStore.Tests
                 FromAccountId = Guid.NewGuid(),
                 ToAccountId = Guid.NewGuid(),
                 Amount = 100,
-                FromCurrency = CurrencyType.USD,
-                ToCurrency = CurrencyType.EUR
+                FromCurrency = Currency.USD,
+                ToCurrency = Currency.EUR
             };
 
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
@@ -453,8 +452,8 @@ namespace TransactionStore.Tests
                 FromAccountId = Guid.NewGuid(),
                 ToAccountId = Guid.NewGuid(),
                 Amount = 100,
-                FromCurrency = CurrencyType.USD,
-                ToCurrency = CurrencyType.EUR
+                FromCurrency = Currency.USD,
+                ToCurrency = Currency.EUR
             };
             var exchangeRate = 0.85m;
             var fromTransaction = new Transaction

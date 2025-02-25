@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using MYPBackendMicroserviceIntegrations.Enums;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Models;
-using TransactionStore.Core;
 using TransactionStore.Presentation.DTOs.Requests;
 using TransactionStore.Presentation.DTOs.Responses;
 

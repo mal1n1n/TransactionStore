@@ -6,7 +6,6 @@ using Moq;
 using MYPBackendMicroserviceIntegrations.Enums;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Models;
-using TransactionStore.Core;
 using TransactionStore.Presentation.Controllers;
 using TransactionStore.Presentation.DTOs.Requests;
 using TransactionStore.Presentation.DTOs.Responses;
@@ -70,7 +69,7 @@ public class TransactionControllerTests
         var request = new CreateTransactionRequest
         {
             AccountId = Guid.NewGuid(),
-            Currency = CurrencyType.USD,
+            Currency = Currency.USD,
             Amount = 100
         };
         var transactionModel = mapper.Map<TransactionModel>(request);
@@ -101,7 +100,7 @@ public class TransactionControllerTests
         var request = new CreateTransactionRequest
         {
             AccountId = Guid.NewGuid(),
-            Currency = CurrencyType.USD,
+            Currency = Currency.USD,
             Amount = 100
         };
         var transactionModel = mapper.Map<TransactionModel>(request);
@@ -134,8 +133,8 @@ public class TransactionControllerTests
             FromAccountId = Guid.NewGuid(),
             ToAccountId = Guid.NewGuid(),
             Amount = 100,
-            FromCurrency = CurrencyType.USD,
-            ToCurrency = CurrencyType.EUR
+            FromCurrency = Currency.USD,
+            ToCurrency = Currency.EUR
         };
         var transferModel = mapper.Map<TransferTransactionModel>(request);
         var transactionIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };

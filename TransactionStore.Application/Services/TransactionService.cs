@@ -133,7 +133,7 @@ public class TransactionService(
 
         var depTransaction = transactionFactory.CreateTransaction(transactionModel, TransactionType.Deposit);
         await transactionRepository.AddAsync(depTransaction);
-        var depMessage = transactionFactory.CreateTransactionMessage(depTransaction, transactionModel.CurrencyType);
+        var depMessage = transactionFactory.CreateTransactionMessage(depTransaction, transactionModel.Currency);
         await publishEndpoint.Publish(depMessage);
 
         logger.LogInformation("CreateDepositTransaction successful for AccountId: {AccountId}, Amount: {Amount}", transactionModel.AccountId, transactionModel.Amount);
@@ -154,7 +154,7 @@ public class TransactionService(
         var transaction = transactionFactory.CreateTransaction(transactionModel, TransactionType.Withdrawal);
         await transactionRepository.CreateTransactionAsync(transaction, lastTransaction);
 
-        var message = transactionFactory.CreateTransactionMessage(transaction, transactionModel.CurrencyType);
+        var message = transactionFactory.CreateTransactionMessage(transaction, transactionModel.Currency);
         await publishEndpoint.Publish(message);
 
         logger.LogInformation("CreateWithdrawalTransaction successful for AccountId: {AccountId}, Amount: {Amount}", transactionModel.AccountId, transactionModel.Amount);
