@@ -21,7 +21,7 @@ public class TransactionRepository(
         _dbConnection = dbConnection;
     }
 
-    public async Task CreateTransactionAsync(Transaction transaction, Guid? lastTransactionId)
+    public async Task CreateWithdrawalTransactionAsync(Transaction transaction, Guid? lastTransactionId)
     {
         var parameters = new DynamicParameters();
         parameters.Add("accountid", transaction.AccountId, DbType.Guid);

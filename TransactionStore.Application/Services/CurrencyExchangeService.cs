@@ -1,27 +1,45 @@
 ﻿using Microsoft.Extensions.Logging;
+using MYPBackendMicroserviceIntegrations.Enums;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
-using TransactionStore.Core;
 
 namespace TransactionStore.Application.Services;
 public class CurrencyExchangeClient(
         ILogger<CurrencyExchangeClient> logger) 
     : ICurrencyExchangeClient
 {
-    private readonly Dictionary<string, decimal> _rates = new();
+    private static readonly Dictionary<string, decimal> _rates = new();
 
-    public void UpdateRates(Dictionary<string, decimal> rates)
+    public void UpdateRates(Currency baseCurrency, Dictionary<string, decimal> rates)
     {
         logger.LogDebug($"Updating exchange rates with {rates.Count} rates");
         _rates.Clear();
-
         foreach (var rate in rates)
         {
             _rates[rate.Key] = rate.Value;
         }
+
+        foreach (var fromCurrency in Enum.GetValues<Currency>())
+        {
+            foreach (var toCurrency in Enum.GetValues<Currency>())
+            {
+                if (fromCurrency == toCurrency || fromCurrency == Currency.Unknown || toCurrency == Currency.Unknown)
+                    continue;
+
+                var fromBaseKey = $"{baseCurrency}{fromCurrency}";
+                var toBaseKey = $"{baseCurrency}{toCurrency}";
+
+                if (_rates.TryGetValue(fromBaseKey, out var fromBaseRate) && _rates.TryGetValue(toBaseKey, out var toBaseRate))
+                {
+                    var crossRate = toBaseRate / fromBaseRate;
+                    var crossKey = $"{fromCurrency}{toCurrency}";
+                    _rates[crossKey] = crossRate;
+                }
+            }
+        }
     }
 
-    public decimal GetExchangeRate(CurrencyType fromCurrency, CurrencyType toCurrency)
+    public decimal GetExchangeRate(Currency fromCurrency, Currency toCurrency)
     {
         logger.LogInformation($"Getting exchange rate from {fromCurrency} to {toCurrency}");
         

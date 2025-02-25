@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using FluentAssertions;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using MYPBackendMicroserviceIntegrations.Enums;
@@ -8,7 +7,6 @@ using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Factories;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Application.Models;
-using TransactionStore.Core;
 using TransactionStore.Persistence.Entities;
 using Xunit;
 
@@ -80,8 +78,8 @@ public class TransactionFactoryTests
             FromAccountId = Guid.NewGuid(),
             ToAccountId = Guid.NewGuid(),
             Amount = amount,
-            FromCurrency = CurrencyType.USD,
-            ToCurrency = CurrencyType.EUR
+            FromCurrency = Currency.USD,
+            ToCurrency = Currency.EUR
         };
 
         _commissionUtils.Setup(cu => cu.CalculateCommission(amount, TransactionType.Transfer)).Returns(expectedCommission);
@@ -129,8 +127,8 @@ public class TransactionFactoryTests
             FromAccountId = Guid.NewGuid(),
             ToAccountId = Guid.NewGuid(),
             Amount = 100,
-            FromCurrency = CurrencyType.USD,
-            ToCurrency = CurrencyType.EUR
+            FromCurrency = Currency.USD,
+            ToCurrency = Currency.EUR
         };
 
         _commissionUtils.Setup(cu => cu.CalculateCommission(It.IsAny<decimal>(), TransactionType.Transfer)).Throws(new CommissionSettingException("TransactionCommissionRates:Transfer is not configured or went broken."));

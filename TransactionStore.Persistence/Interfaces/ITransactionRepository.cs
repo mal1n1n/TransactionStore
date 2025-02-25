@@ -3,6 +3,6 @@
 namespace TransactionStore.Persistence.Interfaces;
 public interface ITransactionRepository : IBaseRepository<Transaction>
 {
-    Task CreateTransactionAsync(Transaction transaction, Guid? lastTransactionId);
+    Task CreateWithdrawalTransactionAsync(Transaction transaction, Guid? lastTransactionId);
     Task CreateTransferTransactionAsync(Transaction transFrom, Transaction transTo, Guid? lastTransactionId);
 }

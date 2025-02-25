@@ -1,5 +1,4 @@
 ﻿using TransactionStore.Application.Models;
-using TransactionStore.Core;
 
 namespace TransactionStore.Application.Interfaces;
 public interface ITransactionService
