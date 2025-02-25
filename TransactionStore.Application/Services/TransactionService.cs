@@ -152,7 +152,7 @@ public class TransactionService(
         }
 
         var transaction = transactionFactory.CreateTransaction(transactionModel, TransactionType.Withdrawal);
-        await transactionRepository.CreateTransactionAsync(transaction, lastTransaction);
+        await transactionRepository.CreateWithdrawalTransactionAsync(transaction, lastTransaction);
 
         var message = transactionFactory.CreateTransactionMessage(transaction, transactionModel.Currency);
         await publishEndpoint.Publish(message);

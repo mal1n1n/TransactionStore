@@ -392,7 +392,7 @@ namespace TransactionStore.Tests
             _transactionRepository.Setup(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = accountId }))))
                 .ReturnsAsync([new() { AccountId = accountId, Amount = 200 }]);
-            _transactionRepository.Setup(repo => repo.CreateTransactionAsync(transaction, It.IsAny<Guid?>()))
+            _transactionRepository.Setup(repo => repo.CreateWithdrawalTransactionAsync(transaction, It.IsAny<Guid?>()))
                 .Returns(Task.CompletedTask);
             _transactionFactory.Setup(factory => factory.CreateTransactionMessage(transaction, Currency.BGN))
                 .Returns(expectedMessage);
@@ -405,7 +405,7 @@ namespace TransactionStore.Tests
             _transactionFactory.Verify(factory => factory.CreateTransaction(transactionModel, TransactionType.Withdrawal), Times.Once);
             _transactionRepository.Verify(repo => repo.FindAsync(It.Is<Expression<Func<Transaction, bool>>>(predicate =>
                 predicate.Compile().Invoke(new Transaction { AccountId = accountId }))), Times.Once);
-            _transactionRepository.Verify(repo => repo.CreateTransactionAsync(transaction, It.IsAny<Guid?>()), Times.Once);
+            _transactionRepository.Verify(repo => repo.CreateWithdrawalTransactionAsync(transaction, It.IsAny<Guid?>()), Times.Once);
             _publishEndpoint.Verify(pe => pe.Publish(It.Is<TransactionCreatedMessage>(msg =>
                 msg.Id == expectedMessage.Id &&
                 msg.AccountId == expectedMessage.AccountId &&
