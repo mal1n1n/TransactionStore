@@ -17,8 +17,7 @@ public class CurrencyExchangeClient(
         _rates.Clear();
         foreach (var rate in rates)
         {
-            var key = $"{rate.Key}";
-            _rates[key] = rate.Value;
+            _rates[rate.Key] = rate.Value;
         }
 
         foreach (var fromCurrency in Enum.GetValues<CurrencyType>())
