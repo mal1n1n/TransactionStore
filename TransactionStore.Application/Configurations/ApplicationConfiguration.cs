@@ -19,6 +19,7 @@ public static class ApplicationConfiguration
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<ICurrencyExchangeClient, CurrencyExchangeClient>();
         services.AddScoped<ITransactionFactory, TransactionFactory>();
+        services.AddScoped<CurrencyExchangeRateConsumer>();
         services.AddOptions<RabbitMqConfiguration>()
             .Configure<IConfiguration>((options, configuration) =>
             {

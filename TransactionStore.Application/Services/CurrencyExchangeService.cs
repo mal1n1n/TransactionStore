@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using MYPBackendMicroserviceIntegrations.Enums;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Interfaces;
 using TransactionStore.Core;
@@ -10,14 +11,33 @@ public class CurrencyExchangeClient(
 {
     private readonly Dictionary<string, decimal> _rates = new();
 
-    public void UpdateRates(Dictionary<string, decimal> rates)
+    public void UpdateRates(Currency baseCurrency, Dictionary<string, decimal> rates)
     {
         logger.LogDebug($"Updating exchange rates with {rates.Count} rates");
         _rates.Clear();
-
         foreach (var rate in rates)
         {
-            _rates[rate.Key] = rate.Value;
+            var key = $"{rate.Key}";
+            _rates[key] = rate.Value;
+        }
+
+        foreach (var fromCurrency in Enum.GetValues<CurrencyType>())
+        {
+            foreach (var toCurrency in Enum.GetValues<CurrencyType>())
+            {
+                if (fromCurrency == toCurrency || fromCurrency == CurrencyType.Unknown || toCurrency == CurrencyType.Unknown)
+                    continue;
+
+                var fromBaseKey = $"{baseCurrency}{fromCurrency}";
+                var toBaseKey = $"{baseCurrency}{toCurrency}";
+
+                if (_rates.TryGetValue(fromBaseKey, out var fromBaseRate) && _rates.TryGetValue(toBaseKey, out var toBaseRate))
+                {
+                    var crossRate = toBaseRate / fromBaseRate;
+                    var crossKey = $"{fromCurrency}{toCurrency}";
+                    _rates[crossKey] = crossRate;
+                }
+            }
         }
     }
 

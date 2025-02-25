@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Moq;
+using MYPBackendMicroserviceIntegrations.Enums;
 using TransactionStore.Application.Exceptions;
 using TransactionStore.Application.Services;
 using TransactionStore.Core;
@@ -35,12 +36,13 @@ public class CurrencyExchangeServiceTests
         };
 
         // Act
-        _sut.UpdateRates(rates);
+        _sut.UpdateRates(Currency.USD, rates);
 
         // Assert
         var fromCurrency = (CurrencyType)Enum.Parse(typeof(CurrencyType), currencyPair.Substring(0, 3));
         var toCurrency = (CurrencyType)Enum.Parse(typeof(CurrencyType), currencyPair.Substring(3, 3));
-        Assert.Equal(expectedRate, _sut.GetExchangeRate(fromCurrency, toCurrency));
+        var actualRate = _sut.GetExchangeRate(fromCurrency, toCurrency);
+        Assert.Equal(expectedRate, actualRate, 4);
     }
 
     [Theory]
@@ -54,7 +56,7 @@ public class CurrencyExchangeServiceTests
             { "USDEUR", 0.85m },
             { "USDJPY", 110m }
         };
-        _sut.UpdateRates(rates);
+        _sut.UpdateRates(Currency.USD, rates);
 
         // Act
         var rate = _sut.GetExchangeRate(fromCurrency, toCurrency);
@@ -86,7 +88,7 @@ public class CurrencyExchangeServiceTests
             { "USDEUR", 0.85m },
             { "USDJPY", 110m }
         };
-        _sut.UpdateRates(rates);
+        _sut.UpdateRates(Currency.USD, rates);
 
         // Act & Assert
         Assert.Throws<ExchangeRateNotFoundException>(() => _sut.GetExchangeRate(fromCurrency, toCurrency));

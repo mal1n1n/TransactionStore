@@ -2,7 +2,6 @@ using TransactionStore.Presentation.Configurations;
 using TransactionStore.Persistence.Configurations;
 using TransactionStore.Application.Configurations;
 using Serilog;
-using TransactionStore.Presentation.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
